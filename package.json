@@ -1,0 +1,19 @@
+{
+  "name": "pi-picture-kiosk",
+  "version": "0.1.0",
+  "description": "Local-first Raspberry Pi picture frame and ambience kiosk.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server/server.js",
+    "start": "node server/server.js",
+    "scan": "node scripts/scan-media.js",
+    "check-media": "node scripts/check-media.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

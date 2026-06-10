@@ -1,0 +1,60 @@
+{
+  "device_name": "{{ frame_device_name }}",
+  "location": "{{ frame_location }}",
+  "server": {
+    "host": "{{ frame_server_host }}",
+    "port": {{ frame_server_port }}
+  },
+  "media": {
+    "root": "{{ frame_media_root }}",
+    "slideshow_dirs": ["slideshow/photos"],
+    "ambience_dirs": ["ambience/videos"],
+    "allowed_image_extensions": [".jpg", ".jpeg", ".png", ".webp"],
+    "allowed_video_extensions": [".mp4", ".webm", ".mkv"]
+  },
+  "display": {
+    "orientation": "landscape",
+    "mode": "{{ frame_display_mode }}",
+    "hide_cursor": true,
+    "transition_seconds": 2
+  },
+  "slideshow": {
+    "photo_duration_seconds": 20,
+    "shuffle": true,
+    "image_fit": "smart-frame",
+    "show_filename": false
+  },
+  "ambience": {
+    "video_duration_minutes": 30,
+    "shuffle": true,
+    "muted": true
+  },
+  "auto_mode": {
+    "enabled": {{ frame_auto_mode_enabled | bool | lower }},
+    "strategy": "weighted-random",
+    "switch_mode_every_minutes": 30,
+    "weights": {
+      "slideshow": 70,
+      "ambience": 30
+    }
+  },
+  "clock": {
+    "enabled": {{ frame_clock_enabled | bool | lower }},
+    "format": "12h",
+    "show_date": false,
+    "position": "bottom-right"
+  },
+  "nas_sync": {
+    "enabled": true,
+    "method": "smb-rsync",
+    "source": "{{ frame_nas_source }}",
+    "mount_point": "{{ frame_nas_mount_point }}",
+    "local_cache": "{{ frame_media_root }}",
+    "sync_interval_minutes": {{ frame_sync_interval_minutes }},
+    "credentials_file": "{{ frame_nas_credentials_file }}",
+    "script_path": "{{ frame_app_dir }}/scripts/sync-from-nas.sh"
+  },
+  "runtime_state": {
+    "path": "{{ frame_state_dir }}/state.json"
+  }
+}

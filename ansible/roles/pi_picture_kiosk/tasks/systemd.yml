@@ -1,0 +1,43 @@
+---
+- name: Install backend systemd service
+  ansible.builtin.template:
+    src: pi-picture-kiosk.service.j2
+    dest: /etc/systemd/system/pi-picture-kiosk.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart pi picture kiosk
+
+- name: Install sync systemd service
+  ansible.builtin.template:
+    src: pi-picture-kiosk-sync.service.j2
+    dest: /etc/systemd/system/pi-picture-kiosk-sync.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Install sync systemd timer
+  ansible.builtin.template:
+    src: pi-picture-kiosk-sync.timer.j2
+    dest: /etc/systemd/system/pi-picture-kiosk-sync.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Enable backend service
+  ansible.builtin.systemd:
+    name: pi-picture-kiosk.service
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Enable sync timer
+  ansible.builtin.systemd:
+    name: pi-picture-kiosk-sync.timer
+    enabled: true
+    state: started
+    daemon_reload: true

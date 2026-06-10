@@ -1,0 +1,16 @@
+---
+- name: Create autostart directory
+  ansible.builtin.file:
+    path: "/home/{{ frame_desktop_user }}/.config/autostart"
+    state: directory
+    owner: "{{ frame_desktop_user }}"
+    group: "{{ frame_desktop_group }}"
+    mode: "0755"
+
+- name: Install Chromium kiosk autostart
+  ansible.builtin.template:
+    src: kiosk-autostart.desktop.j2
+    dest: "/home/{{ frame_desktop_user }}/.config/autostart/pi-picture-kiosk.desktop"
+    owner: "{{ frame_desktop_user }}"
+    group: "{{ frame_desktop_group }}"
+    mode: "0644"

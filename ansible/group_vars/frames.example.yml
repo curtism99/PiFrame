@@ -1,0 +1,26 @@
+frame_device_name: piframe-office
+frame_location: office
+frame_server_host: "0.0.0.0"
+frame_server_port: 8080
+
+frame_media_root: "/srv/pi-picture-kiosk/media"
+frame_app_dir: "/opt/pi-picture-kiosk"
+frame_config_dir: "/etc/pi-picture-kiosk"
+frame_state_dir: "/var/lib/pi-picture-kiosk"
+frame_kiosk_user: "piframe"
+frame_desktop_user: "pi"
+frame_desktop_group: "pi"
+
+frame_nas_source: "//NAS-DS223/PiFrame/office"
+frame_nas_mount_point: "/mnt/pi-picture-kiosk-source"
+frame_nas_credentials_file: "/etc/pi-picture-kiosk/smb-credentials"
+frame_sync_interval_minutes: 15
+
+frame_display_mode: "slideshow"
+frame_clock_enabled: true
+frame_auto_mode_enabled: false
+
+# Store real values in an ignored vars file or Ansible Vault.
+frame_smb_username: "CHANGE_ME"
+frame_smb_password: "CHANGE_ME"
+frame_smb_domain: ""

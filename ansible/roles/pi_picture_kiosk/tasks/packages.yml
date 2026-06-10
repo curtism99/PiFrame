@@ -1,0 +1,12 @@
+---
+- name: Install kiosk packages
+  ansible.builtin.apt:
+    name:
+      - cifs-utils
+      - chromium-browser
+      - nodejs
+      - npm
+      - rsync
+      - unclutter
+    state: present
+    update_cache: true

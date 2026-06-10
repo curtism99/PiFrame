@@ -1,0 +1,168 @@
+:root {
+  color-scheme: dark;
+  --bg: #050506;
+  --panel: rgba(10, 12, 14, 0.72);
+  --text: #f6f4ef;
+  --muted: #b7bcc4;
+  --shadow: 0 22px 70px rgba(0, 0, 0, 0.5);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body.hide-cursor {
+  cursor: none;
+}
+
+.kiosk-shell,
+.media-stage,
+.layer,
+.ambience-video {
+  position: fixed;
+  inset: 0;
+}
+
+.media-stage {
+  background: #050506;
+  isolation: isolate;
+}
+
+.layer {
+  opacity: 0;
+  transition: opacity var(--transition-seconds, 2s) ease;
+}
+
+.layer.is-visible {
+  opacity: 1;
+}
+
+.photo-bg,
+.photo-fg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.photo-bg {
+  object-fit: cover;
+  filter: blur(34px) brightness(0.58) saturate(0.95);
+  transform: scale(1.08);
+}
+
+.photo-fg {
+  object-fit: contain;
+  margin: auto;
+  padding: clamp(18px, 3vw, 54px);
+  filter: drop-shadow(0 18px 46px rgba(0, 0, 0, 0.55));
+}
+
+.fit-cover .photo-fg,
+.fit-cover.single-photo {
+  object-fit: cover;
+  padding: 0;
+}
+
+.fit-contain .photo-bg {
+  display: none;
+}
+
+.fit-contain .photo-fg,
+.fit-contain.single-photo {
+  object-fit: contain;
+  padding: 0;
+}
+
+.ambience-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #050506;
+}
+
+.empty-state {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: min(620px, calc(100vw - 48px));
+  transform: translate(-50%, -50%);
+  text-align: center;
+  padding: 28px;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.empty-state h1 {
+  margin: 0 0 10px;
+  font-size: clamp(28px, 4vw, 46px);
+  line-height: 1.05;
+}
+
+.empty-state p {
+  margin: 0;
+  color: var(--muted);
+  font-size: clamp(16px, 1.7vw, 20px);
+  line-height: 1.45;
+}
+
+.clock-overlay {
+  position: fixed;
+  z-index: 20;
+  min-width: 138px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.42);
+  color: rgba(255, 255, 255, 0.94);
+  text-align: right;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(8px);
+}
+
+.clock-time {
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(28px, 3.2vw, 54px);
+  line-height: 1;
+}
+
+.clock-date {
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: clamp(13px, 1.2vw, 18px);
+}
+
+.clock-overlay.bottom-right {
+  right: clamp(18px, 2vw, 32px);
+  bottom: clamp(18px, 2vw, 32px);
+}
+
+.clock-overlay.bottom-left {
+  left: clamp(18px, 2vw, 32px);
+  bottom: clamp(18px, 2vw, 32px);
+  text-align: left;
+}
+
+.clock-overlay.top-right {
+  right: clamp(18px, 2vw, 32px);
+  top: clamp(18px, 2vw, 32px);
+}
+
+.clock-overlay.top-left {
+  left: clamp(18px, 2vw, 32px);
+  top: clamp(18px, 2vw, 32px);
+  text-align: left;
+}

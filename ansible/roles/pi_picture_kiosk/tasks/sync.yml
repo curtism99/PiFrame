@@ -1,0 +1,16 @@
+---
+- name: Create NAS mount point
+  ansible.builtin.file:
+    path: "{{ frame_nas_mount_point }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Template sync script
+  ansible.builtin.template:
+    src: sync-from-nas.sh.j2
+    dest: "{{ frame_app_dir }}/scripts/sync-from-nas.sh"
+    owner: root
+    group: root
+    mode: "0755"

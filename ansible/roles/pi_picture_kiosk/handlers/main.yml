@@ -1,0 +1,9 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart pi picture kiosk
+  ansible.builtin.systemd:
+    name: pi-picture-kiosk.service
+    state: restarted

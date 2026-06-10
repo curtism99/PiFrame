@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pi Picture Kiosk Admin</title>
+    <link rel="stylesheet" href="/admin/admin.css">
+  </head>
+  <body>
+    <main class="admin-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">LAN-only admin</p>
+          <h1 id="device-name">Pi Picture Kiosk</h1>
+        </div>
+        <button id="refresh" type="button">Refresh</button>
+      </header>
+
+      <section class="status-grid">
+        <article class="panel">
+          <h2>Status</h2>
+          <dl id="status-list"></dl>
+        </article>
+
+        <article class="panel">
+          <h2>Controls</h2>
+          <div class="segmented" role="group" aria-label="Display mode">
+            <button data-mode="slideshow" type="button">Slideshow</button>
+            <button data-mode="ambience" type="button">Ambience</button>
+            <button data-mode="auto" type="button">Auto</button>
+          </div>
+          <label class="toggle">
+            <input id="clock-toggle" type="checkbox">
+            <span>Clock overlay</span>
+          </label>
+          <div class="button-row">
+            <button id="manifest-refresh" type="button">Refresh Manifest</button>
+            <button id="sync-trigger" type="button">Trigger Sync</button>
+          </div>
+          <p class="note">Mode and clock changes are runtime state. They are stored separately from the main config.</p>
+        </article>
+
+        <article class="panel">
+          <h2>Media</h2>
+          <dl id="media-list"></dl>
+        </article>
+
+        <article class="panel warning-panel">
+          <h2>Warnings</h2>
+          <ul id="warning-list"></ul>
+        </article>
+      </section>
+    </main>
+    <script type="module" src="/admin/admin.js"></script>
+  </body>
+</html>

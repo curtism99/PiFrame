@@ -1,0 +1,72 @@
+{
+  "device_name": "piframe-office",
+  "location": "office",
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080
+  },
+  "media": {
+    "root": "sample-media",
+    "slideshow_dirs": [
+      "slideshow/photos"
+    ],
+    "ambience_dirs": [
+      "ambience/videos"
+    ],
+    "allowed_image_extensions": [
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".webp"
+    ],
+    "allowed_video_extensions": [
+      ".mp4",
+      ".webm",
+      ".mkv"
+    ]
+  },
+  "display": {
+    "orientation": "landscape",
+    "mode": "slideshow",
+    "hide_cursor": true,
+    "transition_seconds": 2
+  },
+  "slideshow": {
+    "photo_duration_seconds": 20,
+    "shuffle": true,
+    "image_fit": "smart-frame",
+    "show_filename": false
+  },
+  "ambience": {
+    "video_duration_minutes": 30,
+    "shuffle": true,
+    "muted": true
+  },
+  "auto_mode": {
+    "enabled": false,
+    "strategy": "weighted-random",
+    "switch_mode_every_minutes": 30,
+    "weights": {
+      "slideshow": 70,
+      "ambience": 30
+    }
+  },
+  "clock": {
+    "enabled": true,
+    "format": "12h",
+    "show_date": false,
+    "position": "bottom-right"
+  },
+  "nas_sync": {
+    "enabled": true,
+    "method": "smb-rsync",
+    "source": "//NAS-DS223/PiFrame/office",
+    "mount_point": "/mnt/pi-picture-kiosk-source",
+    "local_cache": "/srv/pi-picture-kiosk/media",
+    "sync_interval_minutes": 15,
+    "credentials_file": "/etc/pi-picture-kiosk/smb-credentials"
+  },
+  "runtime_state": {
+    "path": ".runtime/state.json"
+  }
+}

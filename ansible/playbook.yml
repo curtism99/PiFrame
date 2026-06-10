@@ -1,0 +1,6 @@
+---
+- name: Provision Pi Picture Kiosk frames
+  hosts: frames
+  become: true
+  roles:
+    - pi_picture_kiosk

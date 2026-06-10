@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Name=Pi Picture Kiosk
+Exec=sh -c 'unclutter -idle 1 -root & chromium-browser --kiosk --noerrdialogs --disable-infobars --disable-session-crashed-bubble --check-for-update-interval=31536000 http://localhost:{{ frame_server_port }}'
+X-GNOME-Autostart-enabled=true
