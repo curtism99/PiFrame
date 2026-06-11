@@ -14,6 +14,7 @@ export function healthRouter({ config, configPath, runtimeState, manifestStore }
       uptime_seconds: Math.round(process.uptime()),
       config_path: configPath,
       media_root: manifestStore.mediaRoot,
+      static_media_root: manifestStore.staticMediaRoot,
       mode: state.current_mode ?? config.display?.mode ?? "slideshow",
       clock_enabled: state.clock_enabled,
       manifest_generated_at: manifest?.generated_at ?? null,

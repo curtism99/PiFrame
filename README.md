@@ -53,11 +53,23 @@ Put test files here:
 
 ```text
 sample-media/
-  slideshow/
+  media/
     photos/
-  ambience/
+      family/
+      travel/
+      art/
     videos/
+      fireplace/
+      clouds/
+      abstract/
+      short-clips/
+  playlists/
+    slideshow.json
+    ambience.json
 ```
+
+Playlist folder entries are scanned recursively, so `media/photos` includes all
+albums underneath it.
 
 Run the development server:
 

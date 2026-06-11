@@ -8,8 +8,10 @@ frame_app_dir: "/opt/pi-picture-kiosk"
 frame_config_dir: "/etc/pi-picture-kiosk"
 frame_state_dir: "/var/lib/pi-picture-kiosk"
 frame_kiosk_user: "piframe"
-frame_desktop_user: "pi"
-frame_desktop_group: "pi"
+# Desktop login user that owns Chromium autostart. Defaults to ansible_user in the role.
+# Set this only if the Pi desktop logs in as a different user than SSH.
+# frame_desktop_user: "curtis"
+# frame_desktop_group: "curtis"
 
 frame_nas_source: "//NAS-DS223/PiFrame/office"
 frame_nas_mount_point: "/mnt/pi-picture-kiosk-source"

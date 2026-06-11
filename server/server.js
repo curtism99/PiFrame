@@ -27,7 +27,7 @@ app.use((request, response, next) => {
 
 app.use("/", express.static(path.join(projectRoot, "app"), { index: "index.html" }));
 app.use("/admin", express.static(path.join(projectRoot, "admin"), { index: "index.html" }));
-app.use("/media", express.static(manifestStore.mediaRoot, {
+app.use("/media", express.static(manifestStore.staticMediaRoot, {
   fallthrough: true,
   immutable: false,
   maxAge: "1h"

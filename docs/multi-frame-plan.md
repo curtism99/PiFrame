@@ -18,14 +18,17 @@ NAS layout:
 ```text
 PiFrame/
   office/
-    slideshow/photos/
-    ambience/videos/
+    media/photos/
+    media/videos/
+    playlists/
   living-room/
-    slideshow/photos/
-    ambience/videos/
+    media/photos/
+    media/videos/
+    playlists/
   hallway/
-    slideshow/photos/
-    ambience/videos/
+    media/photos/
+    media/videos/
+    playlists/
 ```
 
 Each Pi remains independent. A future central dashboard can be added later, but

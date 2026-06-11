@@ -7,10 +7,17 @@
   },
   "media": {
     "root": "{{ frame_media_root }}",
-    "slideshow_dirs": ["slideshow/photos"],
-    "ambience_dirs": ["ambience/videos"],
+    "asset_base_dir": "media",
+    "fallback_dirs": {
+      "slideshow": ["media/photos"],
+      "ambience": ["media/videos"]
+    },
     "allowed_image_extensions": [".jpg", ".jpeg", ".png", ".webp"],
     "allowed_video_extensions": [".mp4", ".webm", ".mkv"]
+  },
+  "playlists": {
+    "slideshow": "playlists/slideshow.json",
+    "ambience": "playlists/ambience.json"
   },
   "display": {
     "orientation": "landscape",

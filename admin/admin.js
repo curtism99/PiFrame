@@ -87,8 +87,13 @@ function render({ health, config, manifest, mode }) {
   setDefinitionList(elements.mediaList, {
     "Photos": manifest.counts?.photos ?? 0,
     "Videos": manifest.counts?.videos ?? 0,
+    "Slideshow items": manifest.counts?.slideshow_items ?? 0,
+    "Ambience videos": manifest.counts?.ambience_videos ?? 0,
+    "Slideshow roots": (manifest.playlists?.slideshow ?? []).join(", ") || "none",
+    "Ambience roots": (manifest.playlists?.ambience ?? []).join(", ") || "none",
     "Manifest": manifest.generated_at,
-    "Local cache": manifest.media_root
+    "Local cache": manifest.media_root,
+    "Static media root": manifest.media_asset_root ?? config.media.root
   });
 
   const warnings = [

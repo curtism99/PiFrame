@@ -6,14 +6,14 @@ export class SlideshowMode {
     this.stage = stage;
     this.emptyState = emptyState;
     this.config = config;
-    this.photos = manifest.slideshow?.photos ?? [];
-    this.picker = new MediaPicker(this.photos, config.slideshow?.shuffle !== false);
+    this.items = manifest.slideshow?.items ?? manifest.slideshow?.photos ?? [];
+    this.picker = new MediaPicker(this.items, config.slideshow?.shuffle !== false);
     this.timer = null;
   }
 
   start() {
     this.stop();
-    if (this.photos.length === 0) {
+    if (this.items.length === 0) {
       this.stage.replaceChildren();
       this.emptyState.hidden = false;
       return;
@@ -34,6 +34,15 @@ export class SlideshowMode {
       return;
     }
 
+    if (item.type === "video") {
+      this.showVideo(item);
+      return;
+    }
+
+    this.showPhoto(item);
+  }
+
+  showPhoto(item) {
     const layer = document.createElement("div");
     const fit = this.config.slideshow?.image_fit ?? "smart-frame";
     layer.className = `layer fit-${fit}`;
@@ -63,6 +72,29 @@ export class SlideshowMode {
     }
 
     showLayer(this.stage, layer);
+
+    const seconds = Number(this.config.slideshow?.photo_duration_seconds) || 20;
+    this.timer = window.setTimeout(() => this.showNext(), seconds * 1000);
+  }
+
+  showVideo(item) {
+    const layer = document.createElement("div");
+    layer.className = "layer";
+
+    const video = document.createElement("video");
+    video.className = "ambience-video";
+    video.src = item.url;
+    video.autoplay = true;
+    video.loop = false;
+    video.playsInline = true;
+    video.muted = true;
+    video.preload = "auto";
+
+    video.addEventListener("ended", () => this.showNext(), { once: true });
+    video.addEventListener("error", () => this.showNext(), { once: true });
+    layer.append(video);
+    showLayer(this.stage, layer);
+    video.play().catch(() => {});
 
     const seconds = Number(this.config.slideshow?.photo_duration_seconds) || 20;
     this.timer = window.setTimeout(() => this.showNext(), seconds * 1000);

@@ -7,12 +7,15 @@
   },
   "media": {
     "root": "sample-media",
-    "slideshow_dirs": [
-      "slideshow/photos"
-    ],
-    "ambience_dirs": [
-      "ambience/videos"
-    ],
+    "asset_base_dir": "media",
+    "fallback_dirs": {
+      "slideshow": [
+        "media/photos"
+      ],
+      "ambience": [
+        "media/videos"
+      ]
+    },
     "allowed_image_extensions": [
       ".jpg",
       ".jpeg",
@@ -24,6 +27,10 @@
       ".webm",
       ".mkv"
     ]
+  },
+  "playlists": {
+    "slideshow": "playlists/slideshow.json",
+    "ambience": "playlists/ambience.json"
   },
   "display": {
     "orientation": "landscape",
