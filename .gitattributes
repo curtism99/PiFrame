@@ -1,0 +1,10 @@
+*.sh text eol=lf
+*.sh.j2 text eol=lf
+*.service text eol=lf
+*.service.j2 text eol=lf
+*.timer text eol=lf
+*.timer.j2 text eol=lf
+*.desktop text eol=lf
+*.desktop.j2 text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf

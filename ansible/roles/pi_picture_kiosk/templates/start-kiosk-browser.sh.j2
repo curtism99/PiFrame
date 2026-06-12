@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+set -u
+
+APP_URL="http://localhost:{{ frame_server_port }}"
+HEALTH_URL="${APP_URL}/api/health"
+LOG_DIR="${HOME}/.local/state/pi-picture-kiosk"
+LOG_FILE="${LOG_DIR}/kiosk-browser.log"
+PROFILE_DIR="${HOME}/.config/pi-picture-kiosk/chromium-profile"
+
+mkdir -p "${LOG_DIR}" "${PROFILE_DIR}"
+
+log() {
+  printf '%s %s\n' "$(date --iso-8601=seconds)" "$*" | tee -a "${LOG_FILE}"
+}
+
+if command -v unclutter >/dev/null 2>&1; then
+  if ! pgrep -x unclutter >/dev/null 2>&1; then
+    unclutter -idle 1 -root >/dev/null 2>&1 &
+  fi
+fi
+
+for attempt in $(seq 1 60); do
+  if curl -fsS "${HEALTH_URL}" >/dev/null 2>&1; then
+    log "Kiosk backend is ready at ${HEALTH_URL}"
+    break
+  fi
+
+  if [ "${attempt}" -eq 60 ]; then
+    log "Kiosk backend did not answer after waiting; launching Chromium anyway"
+    break
+  fi
+
+  sleep 2
+done
+
+if command -v chromium-browser >/dev/null 2>&1; then
+  CHROMIUM="$(command -v chromium-browser)"
+elif command -v chromium >/dev/null 2>&1; then
+  CHROMIUM="$(command -v chromium)"
+else
+  log "Could not find chromium-browser or chromium"
+  exit 1
+fi
+
+exec "${CHROMIUM}" \
+  --kiosk \
+  --app="${APP_URL}" \
+  --noerrdialogs \
+  --disable-infobars \
+  --disable-session-crashed-bubble \
+  --check-for-update-interval=31536000 \
+  --autoplay-policy=no-user-gesture-required \
+  --user-data-dir="${PROFILE_DIR}"

@@ -12,6 +12,9 @@ frame_kiosk_user: "piframe"
 # Set this only if the Pi desktop logs in as a different user than SSH.
 # frame_desktop_user: "curtis"
 # frame_desktop_group: "curtis"
+# Set true on dedicated kiosk Pis so Raspberry Pi OS logs into the desktop
+# automatically and starts Chromium without a keyboard or mouse.
+frame_enable_desktop_autologin: true
 
 # The role writes this to /etc/hosts so SMB can use a readable name without
 # depending on Pi-hole, router DNS quirks, NetBIOS, mDNS, or .home.arpa.

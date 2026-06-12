@@ -5,11 +5,13 @@ The Pi display runs Chromium fullscreen against the local Express server:
 ```bash
 chromium-browser \
   --kiosk \
+  --app=http://localhost:8080 \
   --noerrdialogs \
   --disable-infobars \
   --disable-session-crashed-bubble \
+  --autoplay-policy=no-user-gesture-required \
   --check-for-update-interval=31536000 \
-  http://localhost:8080
+  --user-data-dir="$HOME/.config/pi-picture-kiosk/chromium-profile"
 ```
 
 The Chromium executable name depends on Raspberry Pi OS version. Check with:
@@ -19,8 +21,42 @@ command -v chromium-browser
 command -v chromium
 ```
 
-The Ansible desktop autostart template currently uses `chromium-browser`.
-Adjust the template if the target OS uses a different binary.
+The Ansible role installs `/opt/pi-picture-kiosk/scripts/start-kiosk-browser.sh`.
+That launcher finds either `chromium-browser` or `chromium`, waits briefly for
+`http://localhost:8080/api/health`, hides the pointer with `unclutter`, and then
+opens the kiosk page.
+
+## Boot Autostart
+
+Chromium needs a graphical desktop session, so the role installs a desktop
+autostart entry for the display user:
+
+```text
+~/.config/autostart/pi-picture-kiosk.desktop
+```
+
+For a dedicated frame, set this in `ansible/group_vars/frames.yml`:
+
+```yaml
+frame_desktop_user: "curtis"
+frame_desktop_group: "curtis"
+frame_enable_desktop_autologin: true
+```
+
+After the next Ansible run and reboot, Raspberry Pi OS should auto-login to the
+desktop and launch Chromium at `http://localhost:8080`.
+
+Useful SSH commands:
+
+```bash
+sudo systemctl restart pi-picture-kiosk.service
+DISPLAY=:0 xdotool key F5
+tail -f ~/.local/state/pi-picture-kiosk/kiosk-browser.log
+```
+
+Restarting the Node service does not automatically reload an already-open
+Chromium page. Use the `xdotool` refresh command above, or reboot the Pi, after
+frontend deploys.
 
 ## Video Implications
 

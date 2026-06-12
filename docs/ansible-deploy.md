@@ -52,3 +52,30 @@ ansible-playbook -i inventory.ini playbook.yml
 The playbook installs Node.js, Chromium, `cifs-utils`, `rsync`, deploys the app,
 templates config and credentials, enables the backend service, enables the sync
 timer, and installs a Chromium kiosk autostart desktop entry.
+
+For a dedicated display, make sure `group_vars/frames.yml` names the desktop
+login user and enables desktop autologin:
+
+```yaml
+frame_desktop_user: "curtis"
+frame_desktop_group: "curtis"
+frame_enable_desktop_autologin: true
+```
+
+Then deploy and reboot:
+
+```bash
+ansible-playbook -i inventory.ini playbook.yml --ask-pass --ask-become-pass
+ssh curtis@192.168.0.70 "sudo reboot"
+```
+
+After boot, the Pi should log into the desktop and open Chromium fullscreen at
+`http://localhost:8080`.
+
+For SSH-only control after a frontend deploy:
+
+```bash
+ssh curtis@192.168.0.70
+sudo systemctl restart pi-picture-kiosk.service
+DISPLAY=:0 xdotool key F5
+```

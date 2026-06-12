@@ -4,10 +4,12 @@
     name:
       - cifs-utils
       - chromium-browser
+      - curl
       - nodejs
       - npm
       - rsync
       - smbclient
       - unclutter
+      - xdotool
     state: present
     update_cache: true
