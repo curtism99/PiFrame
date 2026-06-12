@@ -31,6 +31,7 @@ export function syncRouter({ config, projectRoot }) {
       env: {
         ...process.env,
         PIFRAME_NAS_SOURCE: config.nas_sync?.source ?? "",
+        PIFRAME_NAS_SOURCE_SUBDIR: config.nas_sync?.source_subdir ?? "",
         PIFRAME_NAS_MOUNT_POINT: config.nas_sync?.mount_point ?? "",
         PIFRAME_LOCAL_CACHE: config.nas_sync?.local_cache ?? config.media.root,
         PIFRAME_CREDENTIALS_FILE: config.nas_sync?.credentials_file ?? "",

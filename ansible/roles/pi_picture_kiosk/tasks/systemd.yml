@@ -1,4 +1,24 @@
 ---
+- name: Disable old sync units
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: false
+    state: stopped
+    daemon_reload: true
+  loop:
+    - pi-picture-kiosk-sync.timer
+    - pi-picture-kiosk-sync.service
+  failed_when: false
+
+- name: Remove old sync unit files
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ item }}"
+    state: absent
+  loop:
+    - pi-picture-kiosk-sync.timer
+    - pi-picture-kiosk-sync.service
+  notify: Reload systemd
+
 - name: Install backend systemd service
   ansible.builtin.template:
     src: pi-picture-kiosk.service.j2
@@ -12,8 +32,8 @@
 
 - name: Install sync systemd service
   ansible.builtin.template:
-    src: pi-picture-kiosk-sync.service.j2
-    dest: /etc/systemd/system/pi-picture-kiosk-sync.service
+    src: piframe-media-sync.service.j2
+    dest: /etc/systemd/system/piframe-media-sync.service
     owner: root
     group: root
     mode: "0644"
@@ -21,8 +41,8 @@
 
 - name: Install sync systemd timer
   ansible.builtin.template:
-    src: pi-picture-kiosk-sync.timer.j2
-    dest: /etc/systemd/system/pi-picture-kiosk-sync.timer
+    src: piframe-media-sync.timer.j2
+    dest: /etc/systemd/system/piframe-media-sync.timer
     owner: root
     group: root
     mode: "0644"
@@ -37,7 +57,7 @@
 
 - name: Enable sync timer
   ansible.builtin.systemd:
-    name: pi-picture-kiosk-sync.timer
+    name: piframe-media-sync.timer
     enabled: true
     state: started
     daemon_reload: true

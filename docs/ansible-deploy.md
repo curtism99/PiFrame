@@ -29,7 +29,8 @@ frame_nas_ip: "192.168.0.10"
 frame_nas_hostname: "nas-ds223"
 frame_nas_aliases:
   - "NAS-DS223"
-frame_nas_source: "//nas-ds223/PiFrame/office"
+frame_nas_source: "//nas-ds223/PiFrame-Media"
+frame_nas_source_subdir: "office"
 ```
 
 Replace `192.168.0.10` with the actual Synology IP. The role writes the hostname

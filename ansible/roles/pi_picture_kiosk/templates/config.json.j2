@@ -55,6 +55,7 @@
     "enabled": true,
     "method": "smb-rsync",
     "source": "{{ frame_nas_source }}",
+    "source_subdir": "{{ frame_nas_source_subdir | default('') }}",
     "mount_point": "{{ frame_nas_mount_point }}",
     "local_cache": "{{ frame_media_root }}",
     "sync_interval_minutes": {{ frame_sync_interval_minutes }},

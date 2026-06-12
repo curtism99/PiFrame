@@ -1,11 +1,12 @@
 [Unit]
-Description=Sync Pi Picture Kiosk media from NAS
+Description=Sync PiFrame media from NAS
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=oneshot
 Environment=PIFRAME_NAS_SOURCE={{ frame_nas_source }}
+Environment=PIFRAME_NAS_SOURCE_SUBDIR={{ frame_nas_source_subdir | default('') }}
 Environment=PIFRAME_NAS_MOUNT_POINT={{ frame_nas_mount_point }}
 Environment=PIFRAME_LOCAL_CACHE={{ frame_media_root }}
 Environment=PIFRAME_CREDENTIALS_FILE={{ frame_nas_credentials_file }}

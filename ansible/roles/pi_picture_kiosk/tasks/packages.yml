@@ -7,6 +7,7 @@
       - nodejs
       - npm
       - rsync
+      - smbclient
       - unclutter
     state: present
     update_cache: true

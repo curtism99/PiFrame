@@ -12,7 +12,7 @@ The first target frame is:
 hostname: piframe-office
 location: office
 display: 1080p HDMI landscape monitor
-NAS source: //nas-ds223/PiFrame/office
+NAS source: //nas-ds223/PiFrame-Media share, office subfolder
 local cache: /srv/pi-picture-kiosk/media
 ```
 
@@ -23,7 +23,7 @@ or internet access after media has been cached locally.
 
 ```text
 Synology NAS folder
-  //nas-ds223/PiFrame/office
+  //nas-ds223/PiFrame-Media
         |
         v
 SMB mount + rsync timer

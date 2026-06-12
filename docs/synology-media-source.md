@@ -5,22 +5,25 @@ The NAS is the source of truth for media.
 Windows UNC path:
 
 ```text
-\\NAS-DS223\PiFrame\office
+\\NAS-DS223\PiFrame-Media\office
 ```
 
 Linux SMB path:
 
 ```text
-//nas-ds223/PiFrame/office
+//nas-ds223/PiFrame-Media
 ```
 
 Use the real DHCP-reserved NAS IP address in Ansible, then let the playbook add
 a local `/etc/hosts` entry on the Pi for `nas-ds223`.
 
+The sync service mounts the `PiFrame-Media` SMB share and then syncs the `office`
+subfolder into the local cache.
+
 Expected folder layout:
 
 ```text
-PiFrame/
+PiFrame-Media/
   office/
     media/
       photos/

@@ -3,20 +3,20 @@
 The first frame is:
 
 ```text
-piframe-office -> //nas-ds223/PiFrame/office
+piframe-office -> //nas-ds223/PiFrame-Media + office subfolder
 ```
 
 Future frames can use the same app and Ansible role with different vars:
 
 ```text
-piframe-living-room -> //nas-ds223/PiFrame/living-room
-piframe-hallway     -> //nas-ds223/PiFrame/hallway
+piframe-living-room -> //nas-ds223/PiFrame-Media + living-room subfolder
+piframe-hallway     -> //nas-ds223/PiFrame-Media + hallway subfolder
 ```
 
 NAS layout:
 
 ```text
-PiFrame/
+PiFrame-Media/
   office/
     media/photos/
     media/videos/
