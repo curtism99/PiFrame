@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-Environment=PIFRAME_NAS_SOURCE=//NAS-DS223/PiFrame/office
+Environment=PIFRAME_NAS_SOURCE=//nas-ds223/PiFrame/office
 Environment=PIFRAME_NAS_MOUNT_POINT=/mnt/pi-picture-kiosk-source
 Environment=PIFRAME_LOCAL_CACHE=/srv/pi-picture-kiosk/media
 Environment=PIFRAME_CREDENTIALS_FILE=/etc/pi-picture-kiosk/smb-credentials

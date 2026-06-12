@@ -11,8 +11,11 @@ Windows UNC path:
 Linux SMB path:
 
 ```text
-//NAS-DS223/PiFrame/office
+//nas-ds223/PiFrame/office
 ```
+
+Use the real DHCP-reserved NAS IP address in Ansible, then let the playbook add
+a local `/etc/hosts` entry on the Pi for `nas-ds223`.
 
 Expected folder layout:
 

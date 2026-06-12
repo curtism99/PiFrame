@@ -67,7 +67,7 @@
   "nas_sync": {
     "enabled": true,
     "method": "smb-rsync",
-    "source": "//NAS-DS223/PiFrame/office",
+    "source": "//nas-ds223/PiFrame/office",
     "mount_point": "/mnt/pi-picture-kiosk-source",
     "local_cache": "/srv/pi-picture-kiosk/media",
     "sync_interval_minutes": 15,

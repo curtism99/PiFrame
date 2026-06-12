@@ -1,20 +1,31 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-NAS_SOURCE="${PIFRAME_NAS_SOURCE:-//NAS-DS223/PiFrame/office}"
+NAS_SOURCE="${PIFRAME_NAS_SOURCE:-//nas-ds223/PiFrame/office}"
 MOUNT_POINT="${PIFRAME_NAS_MOUNT_POINT:-/mnt/pi-picture-kiosk-source}"
 LOCAL_CACHE="${PIFRAME_LOCAL_CACHE:-/srv/pi-picture-kiosk/media}"
 CREDENTIALS_FILE="${PIFRAME_CREDENTIALS_FILE:-/etc/pi-picture-kiosk/smb-credentials}"
 STATE_FILE="${PIFRAME_STATE_FILE:-/var/lib/pi-picture-kiosk/state.json}"
 LOG_FILE="${PIFRAME_SYNC_LOG:-/var/log/pi-picture-kiosk-sync.log}"
+NAS_HOST="${NAS_SOURCE#//}"
+NAS_HOST="${NAS_HOST%%/*}"
 
 log() {
   printf '%s %s\n' "$(date --iso-8601=seconds)" "$*" | tee -a "$LOG_FILE"
 }
 
+is_ip_address() {
+  [[ "$1" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]
+}
+
 mkdir -p "$MOUNT_POINT" "$LOCAL_CACHE" "$(dirname "$STATE_FILE")"
 
 if ! mountpoint -q "$MOUNT_POINT"; then
+  if ! is_ip_address "$NAS_HOST" && ! getent hosts "$NAS_HOST" >/dev/null; then
+    log "NAS host '$NAS_HOST' does not resolve on this Pi. Add an /etc/hosts entry or use an IP-based source such as //192.168.0.10/PiFrame/office."
+    exit 23
+  fi
+
   if [[ ! -f "$CREDENTIALS_FILE" ]]; then
     log "SMB credentials file missing: $CREDENTIALS_FILE"
     exit 20

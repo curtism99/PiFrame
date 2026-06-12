@@ -13,7 +13,13 @@ frame_kiosk_user: "piframe"
 # frame_desktop_user: "curtis"
 # frame_desktop_group: "curtis"
 
-frame_nas_source: "//NAS-DS223/PiFrame/office"
+# The role writes this to /etc/hosts so SMB can use a readable name without
+# depending on Pi-hole, router DNS quirks, NetBIOS, mDNS, or .home.arpa.
+frame_nas_ip: "192.168.0.10"
+frame_nas_hostname: "nas-ds223"
+frame_nas_aliases:
+  - "NAS-DS223"
+frame_nas_source: "//nas-ds223/PiFrame/office"
 frame_nas_mount_point: "/mnt/pi-picture-kiosk-source"
 frame_nas_credentials_file: "/etc/pi-picture-kiosk/smb-credentials"
 frame_sync_interval_minutes: 15
