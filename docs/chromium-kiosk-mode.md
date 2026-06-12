@@ -10,6 +10,7 @@ chromium-browser \
   --disable-infobars \
   --disable-session-crashed-bubble \
   --autoplay-policy=no-user-gesture-required \
+  --password-store=basic \
   --check-for-update-interval=31536000 \
   --user-data-dir="$HOME/.config/pi-picture-kiosk/chromium-profile"
 ```
@@ -57,6 +58,19 @@ tail -f ~/.local/state/pi-picture-kiosk/kiosk-browser.log
 Restarting the Node service does not automatically reload an already-open
 Chromium page. Use the `xdotool` refresh command above, or reboot the Pi, after
 frontend deploys.
+
+## Keyring Prompt
+
+If Chromium prompts to create or unlock a desktop keyring during kiosk startup,
+the launcher uses this Chromium flag to avoid the keyring:
+
+```text
+--password-store=basic
+```
+
+The kiosk does not need browser-saved passwords because it only opens the local
+app at `http://localhost:8080`. This does not change the NAS SMB credential
+file, which remains root-owned at `/etc/pi-picture-kiosk/smb-credentials`.
 
 ## Video Implications
 
