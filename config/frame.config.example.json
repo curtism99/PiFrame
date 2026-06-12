@@ -36,13 +36,22 @@
     "orientation": "landscape",
     "mode": "slideshow",
     "hide_cursor": true,
-    "transition_seconds": 2
+    "transition_seconds": 3
   },
   "slideshow": {
     "photo_duration_seconds": 20,
     "shuffle": true,
     "image_fit": "smart-frame",
-    "show_filename": false
+    "show_filename": false,
+    "transition_effects": {
+      "enabled": true,
+      "style": "random",
+      "effects": [
+        "fade",
+        "dissolve",
+        "dip"
+      ]
+    }
   },
   "ambience": {
     "video_duration_minutes": 30,

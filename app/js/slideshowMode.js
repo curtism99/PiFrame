@@ -2,10 +2,11 @@ import { MediaPicker } from "./mediaPicker.js";
 import { showLayer } from "./transitions.js";
 
 export class SlideshowMode {
-  constructor(stage, emptyState, config, manifest) {
+  constructor(stage, emptyState, config, manifest, runtimeOptions = {}) {
     this.stage = stage;
     this.emptyState = emptyState;
     this.config = config;
+    this.runtimeOptions = runtimeOptions;
     this.items = manifest.slideshow?.items ?? manifest.slideshow?.photos ?? [];
     this.picker = new MediaPicker(this.items, config.slideshow?.shuffle !== false);
     this.timer = null;
@@ -28,6 +29,10 @@ export class SlideshowMode {
     this.timer = null;
   }
 
+  setRuntimeOptions(runtimeOptions = {}) {
+    this.runtimeOptions = runtimeOptions;
+  }
+
   showNext() {
     const item = this.picker.next();
     if (!item) {
@@ -42,9 +47,10 @@ export class SlideshowMode {
     this.showPhoto(item);
   }
 
-  showPhoto(item) {
+  async showPhoto(item) {
     const layer = document.createElement("div");
     const fit = this.config.slideshow?.image_fit ?? "smart-frame";
+    const transition = this.pickTransition();
     layer.className = `layer fit-${fit}`;
 
     if (fit === "smart-frame") {
@@ -59,22 +65,27 @@ export class SlideshowMode {
       foreground.alt = "";
       foreground.decoding = "async";
 
-      foreground.addEventListener("error", () => this.showNext(), { once: true });
       layer.append(background, foreground);
+      if (!(await waitForImage(foreground))) {
+        this.showNext();
+        return;
+      }
     } else {
       const img = document.createElement("img");
       img.className = `single-photo fit-${fit}`;
       img.src = item.url;
       img.alt = "";
       img.decoding = "async";
-      img.addEventListener("error", () => this.showNext(), { once: true });
       layer.append(img);
+      if (!(await waitForImage(img))) {
+        this.showNext();
+        return;
+      }
     }
 
-    showLayer(this.stage, layer);
+    showLayer(this.stage, layer, transition);
 
-    const seconds = Number(this.config.slideshow?.photo_duration_seconds) || 20;
-    this.timer = window.setTimeout(() => this.showNext(), seconds * 1000);
+    this.timer = window.setTimeout(() => this.showNext(), this.slideSeconds() * 1000);
   }
 
   showVideo(item) {
@@ -93,10 +104,56 @@ export class SlideshowMode {
     video.addEventListener("ended", () => this.showNext(), { once: true });
     video.addEventListener("error", () => this.showNext(), { once: true });
     layer.append(video);
-    showLayer(this.stage, layer);
+    showLayer(this.stage, layer, this.pickTransition());
     video.play().catch(() => {});
 
-    const seconds = Number(this.config.slideshow?.photo_duration_seconds) || 20;
-    this.timer = window.setTimeout(() => this.showNext(), seconds * 1000);
+    this.timer = window.setTimeout(() => this.showNext(), this.slideSeconds() * 1000);
   }
+
+  slideSeconds() {
+    return Number(this.config.slideshow?.photo_duration_seconds) || 20;
+  }
+
+  pickTransition() {
+    const settings = {
+      ...(this.config.slideshow?.transition_effects ?? {}),
+      ...(this.runtimeOptions ?? {})
+    };
+
+    if (settings.enabled === false) {
+      return "fade";
+    }
+
+    const style = settings.style ?? "random";
+    if (style === "fade" || style === "dissolve" || style === "dip") {
+      return style;
+    }
+
+    const transitionGroups = {
+      random: settings.effects ?? ["fade", "dissolve", "dip"]
+    };
+    const transitions = transitionGroups[style] ?? transitionGroups.random;
+    const transition = transitions[Math.floor(Math.random() * transitions.length)] ?? "fade";
+    return ["fade", "dissolve", "dip"].includes(transition) ? transition : "fade";
+  }
+}
+
+async function waitForImage(image) {
+  if (image.complete && image.naturalWidth > 0) {
+    return true;
+  }
+
+  try {
+    if (typeof image.decode === "function") {
+      await image.decode();
+      return image.naturalWidth > 0;
+    }
+  } catch {
+    return false;
+  }
+
+  return new Promise((resolve) => {
+    image.addEventListener("load", () => resolve(true), { once: true });
+    image.addEventListener("error", () => resolve(false), { once: true });
+  });
 }

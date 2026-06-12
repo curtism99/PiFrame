@@ -10,6 +10,7 @@ import { setTransitionSeconds } from "./transitions.js";
 const stage = document.querySelector("#stage");
 const emptyState = document.querySelector("#empty-state");
 const clockElement = document.querySelector("#clock-overlay");
+const CLIENT_BUILD = "transition-layer-fade-v2";
 
 let config;
 let manifest;
@@ -18,8 +19,10 @@ let targetModeName = null;
 let activeMode = null;
 let autoMode = null;
 let clockOverlay = null;
+let runtimeState = null;
 
 try {
+  window.PI_FRAME_CLIENT_BUILD = CLIENT_BUILD;
   config = await fetchConfig();
   manifest = await fetchManifest();
   setTransitionSeconds(config.display?.transition_seconds);
@@ -31,8 +34,8 @@ try {
   clockOverlay = new ClockOverlay(clockElement, config.clock);
   clockOverlay.start();
 
-  const runtime = await fetchRuntimeMode().catch(() => null);
-  const initialMode = runtime?.effective_mode ?? config.display?.mode ?? "slideshow";
+  runtimeState = await fetchRuntimeMode().catch(() => null);
+  const initialMode = runtimeState?.effective_mode ?? config.display?.mode ?? "slideshow";
   startDisplayMode(initialMode);
   pollRuntimeState();
 } catch (error) {
@@ -69,7 +72,7 @@ function startDisplayMode(mode, options = {}) {
   if (normalizedMode === "ambience") {
     activeMode = new AmbienceMode(stage, emptyState, config, manifest);
   } else {
-    activeMode = new SlideshowMode(stage, emptyState, config, manifest);
+    activeMode = new SlideshowMode(stage, emptyState, config, manifest, runtimeState?.slideshow_effects);
   }
 
   activeMode.start();
@@ -90,6 +93,8 @@ function pollRuntimeState() {
     }
 
     clockOverlay?.setEnabled(Boolean(state.clock_enabled));
+    runtimeState = state;
+    activeMode?.setRuntimeOptions?.(state.slideshow_effects);
     if (state.effective_mode && state.effective_mode !== targetModeName) {
       startDisplayMode(state.effective_mode);
     }

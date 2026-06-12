@@ -33,6 +33,19 @@
             <input id="clock-toggle" type="checkbox">
             <span>Clock overlay</span>
           </label>
+          <label class="toggle">
+            <input id="effects-toggle" type="checkbox">
+            <span>Slideshow transitions</span>
+          </label>
+          <label class="field">
+            <span>Effect style</span>
+            <select id="effects-style">
+              <option value="random">Random</option>
+              <option value="fade">Fade only</option>
+              <option value="dissolve">Dissolve</option>
+              <option value="dip">Fade through dark</option>
+            </select>
+          </label>
           <div class="button-row">
             <button id="manifest-refresh" type="button">Refresh Manifest</button>
             <button id="sync-trigger" type="button">Trigger Sync</button>

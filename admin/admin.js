@@ -7,6 +7,8 @@ const elements = {
   manifestRefresh: document.querySelector("#manifest-refresh"),
   syncTrigger: document.querySelector("#sync-trigger"),
   clockToggle: document.querySelector("#clock-toggle"),
+  effectsToggle: document.querySelector("#effects-toggle"),
+  effectsStyle: document.querySelector("#effects-style"),
   modeButtons: [...document.querySelectorAll("[data-mode]")]
 };
 
@@ -31,6 +33,8 @@ elements.clockToggle.addEventListener("change", async () => {
   });
   await refresh();
 });
+elements.effectsToggle.addEventListener("change", updateEffects);
+elements.effectsStyle.addEventListener("change", updateEffects);
 elements.modeButtons.forEach((button) => {
   button.addEventListener("click", async () => {
     await fetch("/api/mode", {
@@ -68,6 +72,8 @@ async function getJson(url) {
 function render({ health, config, manifest, mode }) {
   elements.deviceName.textContent = `${config.device_name} (${config.location})`;
   elements.clockToggle.checked = Boolean(mode.clock_enabled);
+  elements.effectsToggle.checked = Boolean(mode.slideshow_effects?.enabled);
+  elements.effectsStyle.value = mode.slideshow_effects?.style ?? "random";
   elements.modeButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.mode === mode.effective_mode);
   });
@@ -78,6 +84,7 @@ function render({ health, config, manifest, mode }) {
     "Configured mode": mode.configured_mode,
     "Auto enabled": yesNo(mode.auto_mode_enabled),
     "Clock": yesNo(mode.clock_enabled),
+    "Slideshow transitions": `${yesNo(mode.slideshow_effects?.enabled)} (${mode.slideshow_effects?.style ?? "random"})`,
     "Media root": config.media.root,
     "NAS source": config.nas_sync?.source ?? "not configured",
     "Last sync": config.runtime?.last_sync ?? "unknown",
@@ -119,4 +126,16 @@ function setDefinitionList(list, values) {
 
 function yesNo(value) {
   return value ? "yes" : "no";
+}
+
+async function updateEffects() {
+  await fetch("/api/slideshow/effects", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      enabled: elements.effectsToggle.checked,
+      style: elements.effectsStyle.value
+    })
+  });
+  await refresh();
 }

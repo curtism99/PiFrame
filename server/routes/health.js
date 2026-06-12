@@ -19,7 +19,8 @@ export function healthRouter({ config, configPath, runtimeState, manifestStore }
       clock_enabled: state.clock_enabled,
       manifest_generated_at: manifest?.generated_at ?? null,
       last_manifest_error: manifestStore.getLastError()?.message ?? null,
-      admin_auth: "disabled-lan-only"
+      admin_auth: "disabled-lan-only",
+      app_build: "transition-layer-fade-v2"
     });
   });
 

@@ -8,6 +8,7 @@ import { configRouter } from "./routes/config.js";
 import { manifestRouter } from "./routes/manifest.js";
 import { modeRouter } from "./routes/mode.js";
 import { clockRouter } from "./routes/clock.js";
+import { slideshowRouter } from "./routes/slideshow.js";
 import { syncRouter } from "./routes/sync.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -38,6 +39,7 @@ app.use("/api/config", configRouter({ config, runtimeState }));
 app.use("/api/manifest", manifestRouter({ manifestStore }));
 app.use("/api/mode", modeRouter({ config, runtimeState }));
 app.use("/api/clock", clockRouter({ runtimeState }));
+app.use("/api/slideshow", slideshowRouter({ config, runtimeState }));
 app.use("/api/sync", syncRouter({ config, projectRoot }));
 
 app.use((request, response) => {

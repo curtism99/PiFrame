@@ -41,11 +41,47 @@ body.hide-cursor {
 
 .layer {
   opacity: 0;
-  transition: opacity var(--transition-seconds, 2s) ease;
+  filter: none;
+  z-index: 1;
+  transition:
+    opacity var(--transition-seconds, 2s) ease,
+    filter var(--transition-seconds, 2s) ease;
+  will-change: opacity, filter;
 }
 
 .layer.is-visible {
   opacity: 1;
+  filter: none;
+  z-index: 2;
+}
+
+.layer.is-exiting {
+  opacity: 0;
+  z-index: 1;
+}
+
+.layer.transition-dissolve {
+  filter: blur(10px) brightness(0.9);
+}
+
+.layer.transition-dissolve.is-visible {
+  filter: blur(0) brightness(1);
+}
+
+.layer.transition-dissolve.is-exiting {
+  opacity: 0;
+  filter: blur(10px) brightness(0.9);
+}
+
+.layer.transition-dip {
+  transition:
+    opacity var(--transition-seconds, 2s) ease,
+    filter var(--transition-seconds, 2s) ease;
+}
+
+.layer.transition-dip.is-exiting {
+  opacity: 0;
+  filter: brightness(0.45);
 }
 
 .photo-bg,

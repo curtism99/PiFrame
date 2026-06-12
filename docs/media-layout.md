@@ -83,3 +83,19 @@ Supported video extensions:
 
 Portrait photos on a landscape display use smart-frame mode: a blurred
 full-screen background copy with a sharp centered foreground image.
+
+Slideshow transitions affect only the change from one slide to the next. Photos
+stay still while displayed.
+
+```json
+{
+  "transition_effects": {
+    "enabled": true,
+    "style": "random"
+  }
+}
+```
+
+The admin page can toggle transition effects at runtime and switch between
+`random`, `fade`, `dissolve`, and `dip`. Runtime changes are stored separately
+from the main config.

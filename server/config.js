@@ -46,6 +46,8 @@ function createRuntimeState(config, projectRoot) {
   const defaults = {
     current_mode: null,
     clock_enabled: Boolean(config.clock?.enabled),
+    slideshow_effects_enabled: config.slideshow?.transition_effects?.enabled !== false,
+    slideshow_effect_style: config.slideshow?.transition_effects?.style ?? "random",
     last_sync: null,
     updated_at: null
   };
