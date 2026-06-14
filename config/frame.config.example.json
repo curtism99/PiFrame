@@ -36,6 +36,7 @@
     "orientation": "landscape",
     "mode": "slideshow",
     "hide_cursor": true,
+    "cursor_idle_seconds": 3,
     "transition_seconds": 3
   },
   "slideshow": {

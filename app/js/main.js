@@ -8,6 +8,7 @@ import { fetchRuntimeMode } from "./adminClient.js";
 import { setTransitionSeconds } from "./transitions.js";
 import { WidgetLayer } from "./widgetLayer.js";
 import { WeatherWidget } from "./weatherWidget.js";
+import { configureCursorIdle } from "./cursorIdle.js";
 
 const stage = document.querySelector("#stage");
 const emptyState = document.querySelector("#empty-state");
@@ -31,9 +32,7 @@ try {
   manifest = await fetchManifest();
   setTransitionSeconds(config.display?.transition_seconds);
 
-  if (config.display?.hide_cursor) {
-    document.body.classList.add("hide-cursor");
-  }
+  configureCursorIdle(config.display);
 
   widgetLayer = new WidgetLayer(widgetLayerElement);
   clockOverlay = new ClockOverlay(

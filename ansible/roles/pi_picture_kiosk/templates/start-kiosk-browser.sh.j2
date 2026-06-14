@@ -29,8 +29,13 @@ fi
 
 if command -v unclutter >/dev/null 2>&1; then
   if ! pgrep -x unclutter >/dev/null 2>&1; then
-    unclutter -idle 1 -root >/dev/null 2>&1 &
+    log "Starting unclutter with {{ frame_cursor_idle_seconds | default(3) }} second idle delay"
+    unclutter -idle {{ frame_cursor_idle_seconds | default(3) }} -root >/dev/null 2>&1 &
+  else
+    log "unclutter is already running"
   fi
+else
+  log "unclutter is not installed; relying on app cursor hiding"
 fi
 
 for attempt in $(seq 1 60); do

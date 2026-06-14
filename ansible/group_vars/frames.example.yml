@@ -29,6 +29,8 @@ frame_nas_credentials_file: "/etc/pi-picture-kiosk/smb-credentials"
 frame_sync_interval_minutes: 15
 
 frame_display_mode: "slideshow"
+frame_hide_cursor: true
+frame_cursor_idle_seconds: 3
 frame_clock_enabled: true
 frame_clock_position: "top-left"
 frame_auto_mode_enabled: false

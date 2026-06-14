@@ -60,11 +60,33 @@ sudo systemctl restart pi-picture-kiosk.service
 DISPLAY=:0 xdotool key F5
 tail -f ~/.local/state/pi-picture-kiosk/kiosk-browser.log
 pgrep -a chromium
+pkill unclutter
 ```
 
 Restarting the Node service does not automatically reload an already-open
 Chromium page. Use the `xdotool` refresh command above, or reboot the Pi, after
 frontend deploys.
+
+## Cursor Hiding
+
+The web app hides the pointer after `display.cursor_idle_seconds` when
+`display.hide_cursor` is enabled. Moving the mouse makes the pointer visible
+again until it is idle. The launcher also starts `unclutter` with the same idle
+delay as a desktop-level helper.
+
+For Pi deployment, tune these in `ansible/group_vars/frames.yml`:
+
+```yaml
+frame_hide_cursor: true
+frame_cursor_idle_seconds: 3
+```
+
+If you need normal desktop mouse behavior while troubleshooting:
+
+```bash
+pkill chromium
+pkill unclutter
+```
 
 ## Keyring Prompt
 
