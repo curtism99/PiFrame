@@ -151,6 +151,14 @@ ul {
   color: var(--warn);
 }
 
+.weather-alert-list {
+  margin-top: 16px;
+}
+
+.weather-alert-list .is-test {
+  color: #ffb5b5;
+}
+
 li + li {
   margin-top: 8px;
 }

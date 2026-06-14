@@ -62,6 +62,18 @@ frame_desktop_group: "curtis"
 frame_enable_desktop_autologin: true
 ```
 
+For Pi deployment, `group_vars/frames.yml` is also where widget placement and
+weather location belong. `config/frame.config.example.json` is only the local
+development fallback. Ansible renders the production config to
+`/etc/pi-picture-kiosk/config.json` on the Pi.
+
+```yaml
+frame_clock_position: "top-left"
+frame_weather_position: "top-right"
+frame_weather_latitude: 40.6892
+frame_weather_longitude: -74.0445
+```
+
 Then deploy and reboot:
 
 ```bash

@@ -11,6 +11,7 @@ export function configRouter({ config, runtimeState }) {
         state_path: runtimeState.path,
         current_mode: state.current_mode,
         clock_enabled: state.clock_enabled,
+        weather_test_alerts_enabled: state.weather_test_alerts_enabled,
         last_sync: state.last_sync
       },
       warnings: [

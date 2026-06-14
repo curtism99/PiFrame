@@ -10,12 +10,15 @@ import { modeRouter } from "./routes/mode.js";
 import { clockRouter } from "./routes/clock.js";
 import { slideshowRouter } from "./routes/slideshow.js";
 import { syncRouter } from "./routes/sync.js";
+import { widgetsRouter } from "./routes/widgets.js";
+import { createWeatherService } from "./widgets/weatherService.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const projectRoot = path.resolve(path.dirname(__filename), "..");
 
 const { config, configPath, runtimeState } = await loadConfig(projectRoot);
 const manifestStore = createManifestStore(config, projectRoot);
+const weatherService = createWeatherService(config, runtimeState);
 
 const app = express();
 app.disable("x-powered-by");
@@ -41,6 +44,7 @@ app.use("/api/mode", modeRouter({ config, runtimeState }));
 app.use("/api/clock", clockRouter({ runtimeState }));
 app.use("/api/slideshow", slideshowRouter({ config, runtimeState }));
 app.use("/api/sync", syncRouter({ config, projectRoot }));
+app.use("/api/widgets", widgetsRouter({ config, runtimeState, weatherService }));
 
 app.use((request, response) => {
   response.status(404).json({ error: "not_found" });

@@ -107,6 +107,9 @@ npm start
 - `GET /api/mode`
 - `POST /api/mode`
 - `POST /api/clock`
+- `GET /api/widgets`
+- `GET /api/widgets/weather`
+- `POST /api/widgets/weather/test-alerts`
 - `POST /api/sync`
 
 The admin page is LAN-only and has no authentication in v1. Do not expose it to
@@ -128,6 +131,19 @@ Videos:
 
 MP4 with H.264 video is preferred for Chromium kiosk mode. MKV files are indexed
 as best-effort and may not play reliably in Chromium.
+
+## Widgets
+
+The display app supports multiple overlay widgets. V1 includes:
+
+- clock/date
+- NWS weather with current temp, hourly forecast, 7-day high/low forecast, and
+  active warning/watch/advisory details
+
+The weather widget is optional and uses latitude/longitude from config. It
+caches the last good NWS response so the frame keeps working if internet or NWS
+is unavailable. The admin page includes a runtime-only test alert toggle for
+previewing severe thunderstorm and tornado alert display.
 
 ## Raspberry Pi Deployment
 

@@ -48,6 +48,7 @@ function createRuntimeState(config, projectRoot) {
     clock_enabled: Boolean(config.clock?.enabled),
     slideshow_effects_enabled: config.slideshow?.transition_effects?.enabled !== false,
     slideshow_effect_style: config.slideshow?.transition_effects?.style ?? "random",
+    weather_test_alerts_enabled: Boolean(config.widgets?.weather?.test_alerts?.enabled),
     last_sync: null,
     updated_at: null
   };

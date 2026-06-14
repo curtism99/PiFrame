@@ -9,24 +9,11 @@
     "root": "sample-media",
     "asset_base_dir": "media",
     "fallback_dirs": {
-      "slideshow": [
-        "media/photos"
-      ],
-      "ambience": [
-        "media/videos"
-      ]
+      "slideshow": ["media/photos"],
+      "ambience": ["media/videos"]
     },
-    "allowed_image_extensions": [
-      ".jpg",
-      ".jpeg",
-      ".png",
-      ".webp"
-    ],
-    "allowed_video_extensions": [
-      ".mp4",
-      ".webm",
-      ".mkv"
-    ]
+    "allowed_image_extensions": [".jpg", ".jpeg", ".png", ".webp"],
+    "allowed_video_extensions": [".mp4", ".webm", ".mkv"]
   },
   "playlists": {
     "slideshow": "playlists/slideshow.json",
@@ -46,11 +33,7 @@
     "transition_effects": {
       "enabled": true,
       "style": "random",
-      "effects": [
-        "fade",
-        "dissolve",
-        "dip"
-      ]
+      "effects": ["fade", "dissolve", "dip"]
     }
   },
   "ambience": {
@@ -71,13 +54,13 @@
     "enabled": true,
     "format": "12h",
     "show_date": true,
-    "position": "bottom-right"
+    "position": "top-left"
   },
   "widgets": {
     "weather": {
       "enabled": true,
       "provider": "nws",
-      "position": "bottom-left",
+      "position": "top-right",
       "latitude": 40.6892,
       "longitude": -74.0445,
       "units": "fahrenheit",

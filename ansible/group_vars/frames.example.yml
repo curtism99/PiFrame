@@ -30,7 +30,15 @@ frame_sync_interval_minutes: 15
 
 frame_display_mode: "slideshow"
 frame_clock_enabled: true
+frame_clock_position: "top-left"
 frame_auto_mode_enabled: false
+
+frame_weather_enabled: true
+frame_weather_position: "top-right"
+frame_weather_latitude: 40.6892
+frame_weather_longitude: -74.0445
+frame_weather_units: "fahrenheit"
+frame_weather_test_alerts_enabled: false
 
 # Store real values in an ignored vars file or Ansible Vault.
 frame_smb_username: "CHANGE_ME"

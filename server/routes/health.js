@@ -17,10 +17,12 @@ export function healthRouter({ config, configPath, runtimeState, manifestStore }
       static_media_root: manifestStore.staticMediaRoot,
       mode: state.current_mode ?? config.display?.mode ?? "slideshow",
       clock_enabled: state.clock_enabled,
+      weather_enabled: Boolean(config.widgets?.weather?.enabled),
+      weather_test_alerts_enabled: Boolean(state.weather_test_alerts_enabled),
       manifest_generated_at: manifest?.generated_at ?? null,
       last_manifest_error: manifestStore.getLastError()?.message ?? null,
       admin_auth: "disabled-lan-only",
-      app_build: "transition-layer-fade-v2"
+      app_build: "widgets-weather-v1"
     });
   });
 

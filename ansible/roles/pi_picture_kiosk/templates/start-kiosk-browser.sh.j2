@@ -6,12 +6,26 @@ HEALTH_URL="${APP_URL}/api/health"
 LOG_DIR="${HOME}/.local/state/pi-picture-kiosk"
 LOG_FILE="${LOG_DIR}/kiosk-browser.log"
 PROFILE_DIR="${HOME}/.config/pi-picture-kiosk/chromium-profile"
+LOCK_FILE="/tmp/pi-picture-kiosk-browser.lock"
 
 mkdir -p "${LOG_DIR}" "${PROFILE_DIR}"
 
 log() {
   printf '%s %s\n' "$(date --iso-8601=seconds)" "$*" | tee -a "${LOG_FILE}"
 }
+
+exec 9>"${LOCK_FILE}"
+if command -v flock >/dev/null 2>&1; then
+  if ! flock -n 9; then
+    log "Kiosk browser launcher is already running"
+    exit 0
+  fi
+fi
+
+if pgrep -f "${PROFILE_DIR}" >/dev/null 2>&1; then
+  log "Chromium kiosk already appears to be running for ${PROFILE_DIR}"
+  exit 0
+fi
 
 if command -v unclutter >/dev/null 2>&1; then
   if ! pgrep -x unclutter >/dev/null 2>&1; then
@@ -42,7 +56,14 @@ else
   exit 1
 fi
 
-exec "${CHROMIUM}" \
+log "Launching Chromium with ${CHROMIUM}"
+
+if command -v flock >/dev/null 2>&1; then
+  flock -u 9 || true
+fi
+exec 9>&-
+
+"${CHROMIUM}" \
   --kiosk \
   --app="${APP_URL}" \
   --noerrdialogs \
@@ -51,4 +72,9 @@ exec "${CHROMIUM}" \
   --check-for-update-interval=31536000 \
   --autoplay-policy=no-user-gesture-required \
   --password-store=basic \
-  --user-data-dir="${PROFILE_DIR}"
+  --user-data-dir="${PROFILE_DIR}" \
+  >>"${LOG_FILE}" 2>&1
+
+status=$?
+log "Chromium exited with status ${status}"
+exit "${status}"

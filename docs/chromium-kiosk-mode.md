@@ -36,6 +36,12 @@ autostart entry for the display user:
 ~/.config/autostart/pi-picture-kiosk.desktop
 ```
 
+It also installs a labwc autostart script for Raspberry Pi OS Wayland sessions:
+
+```text
+~/.config/labwc/autostart
+```
+
 For a dedicated frame, set this in `ansible/group_vars/frames.yml`:
 
 ```yaml
@@ -53,6 +59,7 @@ Useful SSH commands:
 sudo systemctl restart pi-picture-kiosk.service
 DISPLAY=:0 xdotool key F5
 tail -f ~/.local/state/pi-picture-kiosk/kiosk-browser.log
+pgrep -a chromium
 ```
 
 Restarting the Node service does not automatically reload an already-open

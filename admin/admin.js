@@ -2,11 +2,14 @@ const elements = {
   deviceName: document.querySelector("#device-name"),
   statusList: document.querySelector("#status-list"),
   mediaList: document.querySelector("#media-list"),
+  weatherList: document.querySelector("#weather-list"),
+  weatherAlertList: document.querySelector("#weather-alert-list"),
   warningList: document.querySelector("#warning-list"),
   refresh: document.querySelector("#refresh"),
   manifestRefresh: document.querySelector("#manifest-refresh"),
   syncTrigger: document.querySelector("#sync-trigger"),
   clockToggle: document.querySelector("#clock-toggle"),
+  weatherTestAlertsToggle: document.querySelector("#weather-test-alerts-toggle"),
   effectsToggle: document.querySelector("#effects-toggle"),
   effectsStyle: document.querySelector("#effects-style"),
   modeButtons: [...document.querySelectorAll("[data-mode]")]
@@ -33,6 +36,14 @@ elements.clockToggle.addEventListener("change", async () => {
   });
   await refresh();
 });
+elements.weatherTestAlertsToggle.addEventListener("change", async () => {
+  await fetch("/api/widgets/weather/test-alerts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ enabled: elements.weatherTestAlertsToggle.checked })
+  });
+  await refresh();
+});
 elements.effectsToggle.addEventListener("change", updateEffects);
 elements.effectsStyle.addEventListener("change", updateEffects);
 elements.modeButtons.forEach((button) => {
@@ -50,14 +61,15 @@ await refresh();
 window.setInterval(refresh, 15000);
 
 async function refresh() {
-  const [health, config, manifest, mode] = await Promise.all([
+  const [health, config, manifest, mode, weather] = await Promise.all([
     getJson("/api/health"),
     getJson("/api/config"),
     getJson("/api/manifest"),
-    getJson("/api/mode")
+    getJson("/api/mode"),
+    getJson("/api/widgets/weather")
   ]);
 
-  lastPayload = { health, config, manifest, mode };
+  lastPayload = { health, config, manifest, mode, weather };
   render(lastPayload);
 }
 
@@ -69,9 +81,10 @@ async function getJson(url) {
   return response.json();
 }
 
-function render({ health, config, manifest, mode }) {
+function render({ health, config, manifest, mode, weather }) {
   elements.deviceName.textContent = `${config.device_name} (${config.location})`;
   elements.clockToggle.checked = Boolean(mode.clock_enabled);
+  elements.weatherTestAlertsToggle.checked = Boolean(weather.test_alerts_enabled);
   elements.effectsToggle.checked = Boolean(mode.slideshow_effects?.enabled);
   elements.effectsStyle.value = mode.slideshow_effects?.style ?? "random";
   elements.modeButtons.forEach((button) => {
@@ -84,6 +97,8 @@ function render({ health, config, manifest, mode }) {
     "Configured mode": mode.configured_mode,
     "Auto enabled": yesNo(mode.auto_mode_enabled),
     "Clock": yesNo(mode.clock_enabled),
+    "Weather": yesNo(weather.enabled),
+    "Weather test alerts": yesNo(weather.test_alerts_enabled),
     "Slideshow transitions": `${yesNo(mode.slideshow_effects?.enabled)} (${mode.slideshow_effects?.style ?? "random"})`,
     "Media root": config.media.root,
     "NAS source": config.nas_sync?.source ?? "not configured",
@@ -102,6 +117,32 @@ function render({ health, config, manifest, mode }) {
     "Local cache": manifest.media_root,
     "Static media root": manifest.media_asset_root ?? config.media.root
   });
+
+  setDefinitionList(elements.weatherList, {
+    "Enabled": yesNo(weather.enabled),
+    "Status": weather.ok ? "ok" : "not ok",
+    "Location": weather.location ?? "unknown",
+    "Current": weather.current?.temperature != null
+      ? `${weather.current.temperature} deg ${weather.current.temperature_unit ?? "F"}`
+      : "unavailable",
+    "Condition": weather.current?.condition ?? "unknown",
+    "Source": weather.current?.source ?? weather.provider ?? "unknown",
+    "Stale": yesNo(weather.stale),
+    "Updated": weather.updated_at ?? "unknown",
+    "Error": weather.error ?? "none"
+  });
+
+  elements.weatherAlertList.replaceChildren(...(weather.alerts ?? []).map((alert) => {
+    const item = document.createElement("li");
+    item.textContent = `${alert.test ? "TEST " : ""}${alert.event}: ${alert.display_range ?? "Time period unavailable"}`;
+    item.classList.toggle("is-test", Boolean(alert.test));
+    return item;
+  }));
+  if (!(weather.alerts ?? []).length) {
+    const item = document.createElement("li");
+    item.textContent = "No active alerts";
+    elements.weatherAlertList.replaceChildren(item);
+  }
 
   const warnings = [
     ...(config.warnings ?? []),

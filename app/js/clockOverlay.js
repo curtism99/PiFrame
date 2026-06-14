@@ -19,7 +19,7 @@ export class ClockOverlay {
 
   applyConfig(clockConfig = {}) {
     this.config = clockConfig;
-    this.element.className = `clock-overlay ${clockConfig.position ?? "bottom-right"}`;
+    this.element.className = "widget-card clock-widget";
     this.element.hidden = !clockConfig.enabled;
   }
 

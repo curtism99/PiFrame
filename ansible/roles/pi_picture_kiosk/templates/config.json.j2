@@ -53,8 +53,26 @@
   "clock": {
     "enabled": {{ frame_clock_enabled | bool | lower }},
     "format": "12h",
-    "show_date": false,
-    "position": "bottom-right"
+    "show_date": true,
+    "position": "{{ frame_clock_position | default('bottom-right') }}"
+  },
+  "widgets": {
+    "weather": {
+      "enabled": {{ frame_weather_enabled | default(true) | bool | lower }},
+      "provider": "nws",
+      "position": "{{ frame_weather_position | default('bottom-left') }}",
+      "latitude": {{ frame_weather_latitude | default(40.6892) }},
+      "longitude": {{ frame_weather_longitude | default(-74.0445) }},
+      "units": "{{ frame_weather_units | default('fahrenheit') }}",
+      "refresh_minutes": {{ frame_weather_refresh_minutes | default(10) }},
+      "stale_after_minutes": {{ frame_weather_stale_after_minutes | default(90) }},
+      "forecast_cycle_seconds": {{ frame_weather_forecast_cycle_seconds | default(25) }},
+      "max_alerts": {{ frame_weather_max_alerts | default(3) }},
+      "user_agent": "{{ frame_weather_user_agent | default('PiFrame/' ~ frame_device_name) }}",
+      "test_alerts": {
+        "enabled": {{ frame_weather_test_alerts_enabled | default(false) | bool | lower }}
+      }
+    }
   },
   "nas_sync": {
     "enabled": true,

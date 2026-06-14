@@ -6,11 +6,13 @@ import { AutoMode } from "./autoMode.js";
 import { ClockOverlay } from "./clockOverlay.js";
 import { fetchRuntimeMode } from "./adminClient.js";
 import { setTransitionSeconds } from "./transitions.js";
+import { WidgetLayer } from "./widgetLayer.js";
+import { WeatherWidget } from "./weatherWidget.js";
 
 const stage = document.querySelector("#stage");
 const emptyState = document.querySelector("#empty-state");
-const clockElement = document.querySelector("#clock-overlay");
-const CLIENT_BUILD = "transition-layer-fade-v2";
+const widgetLayerElement = document.querySelector("#widget-layer");
+const CLIENT_BUILD = "widgets-weather-v1";
 
 let config;
 let manifest;
@@ -18,7 +20,9 @@ let activeModeName = null;
 let targetModeName = null;
 let activeMode = null;
 let autoMode = null;
+let widgetLayer = null;
 let clockOverlay = null;
+let weatherWidget = null;
 let runtimeState = null;
 
 try {
@@ -31,8 +35,19 @@ try {
     document.body.classList.add("hide-cursor");
   }
 
-  clockOverlay = new ClockOverlay(clockElement, config.clock);
+  widgetLayer = new WidgetLayer(widgetLayerElement);
+  clockOverlay = new ClockOverlay(
+    widgetLayer.getWidgetElement("clock", config.clock?.position),
+    config.clock
+  );
   clockOverlay.start();
+  if (config.widgets?.weather?.enabled) {
+    weatherWidget = new WeatherWidget(
+      widgetLayer.getWidgetElement("weather", config.widgets.weather.position),
+      config.widgets.weather
+    );
+    weatherWidget.start();
+  }
 
   runtimeState = await fetchRuntimeMode().catch(() => null);
   const initialMode = runtimeState?.effective_mode ?? config.display?.mode ?? "slideshow";
