@@ -61,7 +61,25 @@ if [[ ! -d "$SYNC_SOURCE" ]]; then
 fi
 
 log "Starting rsync from $SYNC_SOURCE/ to $LOCAL_CACHE/"
-rsync -av --delete-after "$SYNC_SOURCE"/ "$LOCAL_CACHE"/ | tee -a "$LOG_FILE"
+set +e
+rsync \
+  -rltv \
+  --human-readable \
+  --delete-after \
+  --no-owner \
+  --no-group \
+  --no-perms \
+  --omit-dir-times \
+  "$SYNC_SOURCE"/ "$LOCAL_CACHE"/ 2>&1 | tee -a "$LOG_FILE"
+rsync_status=${PIPESTATUS[0]}
+set -e
+
+if [[ "$rsync_status" -eq 24 ]]; then
+  log "rsync reported vanished files during transfer; treating as non-fatal for this media cache."
+elif [[ "$rsync_status" -ne 0 ]]; then
+  log "rsync failed with exit status $rsync_status. See $LOG_FILE for the file-level error above."
+  exit "$rsync_status"
+fi
 
 PIFRAME_STATE_FILE="$STATE_FILE" node -e '
 const fs = require("fs");

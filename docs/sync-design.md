@@ -80,3 +80,17 @@ sudo smbclient -L //nas-ds223 -A /etc/pi-picture-kiosk/smb-credentials
 ```
 
 Use the exact share name from that list in `frame_nas_source`.
+
+## Rsync Failures
+
+If the service exits with status `23`, the NAS mounted but rsync could not copy
+one or more files. Check the full sync log instead of the clipped systemd view:
+
+```bash
+sudo tail -n 200 /var/log/piframe-media-sync.log
+```
+
+Common causes are unreadable files, unusual filenames, a file being changed on
+the NAS during sync, or destination write errors. The sync script does not try
+to preserve SMB ownership or permissions because the Pi cache only needs media
+files readable by the kiosk app.
