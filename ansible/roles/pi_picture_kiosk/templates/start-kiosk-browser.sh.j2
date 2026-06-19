@@ -6,13 +6,28 @@ HEALTH_URL="${APP_URL}/api/health"
 LOG_DIR="${HOME}/.local/state/pi-picture-kiosk"
 LOG_FILE="${LOG_DIR}/kiosk-browser.log"
 PROFILE_DIR="${HOME}/.config/pi-picture-kiosk/chromium-profile"
+CHROMIUM_PATTERN="--user-data-dir=${PROFILE_DIR}"
 LOCK_FILE="/tmp/pi-picture-kiosk-browser.lock"
+DISPLAY_NAME="${PIFRAME_DISPLAY:-${DISPLAY:-:0}}"
+CHROMIUM_OZONE_PLATFORM="${PIFRAME_CHROMIUM_OZONE_PLATFORM:-{{ frame_chromium_ozone_platform | default('') }}}"
 
 mkdir -p "${LOG_DIR}" "${PROFILE_DIR}"
 
 log() {
   printf '%s %s\n' "$(date --iso-8601=seconds)" "$*" | tee -a "${LOG_FILE}"
 }
+
+prepare_display_env() {
+  export DISPLAY="${DISPLAY_NAME}"
+  if [ -z "${XAUTHORITY:-}" ] && [ -f "${HOME}/.Xauthority" ]; then
+    export XAUTHORITY="${HOME}/.Xauthority"
+  fi
+  if [ -z "${XDG_RUNTIME_DIR:-}" ] && [ -d "/run/user/$(id -u)" ]; then
+    export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+  fi
+}
+
+prepare_display_env
 
 exec 9>"${LOCK_FILE}"
 if command -v flock >/dev/null 2>&1; then
@@ -22,21 +37,25 @@ if command -v flock >/dev/null 2>&1; then
   fi
 fi
 
-if pgrep -f "${PROFILE_DIR}" >/dev/null 2>&1; then
+if pgrep -f -- "${CHROMIUM_PATTERN}" >/dev/null 2>&1; then
   log "Chromium kiosk already appears to be running for ${PROFILE_DIR}"
   exit 0
 fi
 
+{% if frame_hide_cursor | default(true) | bool and frame_install_unclutter | default(false) | bool %}
 if command -v unclutter >/dev/null 2>&1; then
   if ! pgrep -x unclutter >/dev/null 2>&1; then
     log "Starting unclutter with {{ frame_cursor_idle_seconds | default(3) }} second idle delay"
-    unclutter -idle {{ frame_cursor_idle_seconds | default(3) }} -root >/dev/null 2>&1 &
+    DISPLAY="${DISPLAY}" unclutter -idle {{ frame_cursor_idle_seconds | default(3) }} -root >/dev/null 2>&1 &
   else
     log "unclutter is already running"
   fi
 else
   log "unclutter is not installed; relying on app cursor hiding"
 fi
+{% else %}
+log "Desktop cursor helper is disabled; relying on app cursor hiding"
+{% endif %}
 
 for attempt in $(seq 1 60); do
   if curl -fsS "${HEALTH_URL}" >/dev/null 2>&1; then
@@ -61,24 +80,33 @@ else
   exit 1
 fi
 
+CHROMIUM_ARGS=(
+  --kiosk
+  "--app=${APP_URL}"
+  --noerrdialogs
+  --disable-infobars
+  --disable-session-crashed-bubble
+  --check-for-update-interval=31536000
+  --autoplay-policy=no-user-gesture-required
+  --password-store=basic
+  "--user-data-dir=${PROFILE_DIR}"
+)
+
+if [ -n "${CHROMIUM_OZONE_PLATFORM}" ]; then
+  CHROMIUM_ARGS+=("--ozone-platform=${CHROMIUM_OZONE_PLATFORM}")
+fi
+
 log "Launching Chromium with ${CHROMIUM}"
+if [ -n "${CHROMIUM_OZONE_PLATFORM}" ]; then
+  log "Using Chromium ozone platform ${CHROMIUM_OZONE_PLATFORM}"
+fi
 
 if command -v flock >/dev/null 2>&1; then
   flock -u 9 || true
 fi
 exec 9>&-
 
-"${CHROMIUM}" \
-  --kiosk \
-  --app="${APP_URL}" \
-  --noerrdialogs \
-  --disable-infobars \
-  --disable-session-crashed-bubble \
-  --check-for-update-interval=31536000 \
-  --autoplay-policy=no-user-gesture-required \
-  --password-store=basic \
-  --user-data-dir="${PROFILE_DIR}" \
-  >>"${LOG_FILE}" 2>&1
+"${CHROMIUM}" "${CHROMIUM_ARGS[@]}" >>"${LOG_FILE}" 2>&1
 
 status=$?
 log "Chromium exited with status ${status}"

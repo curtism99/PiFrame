@@ -7,6 +7,13 @@
     group: root
     mode: "0755"
 
+- name: Ensure kiosk control script is executable
+  ansible.builtin.file:
+    path: "{{ frame_app_dir }}/scripts/kiosk-control.sh"
+    owner: "{{ frame_kiosk_user }}"
+    group: "{{ frame_kiosk_user }}"
+    mode: "0755"
+
 - name: Create autostart directory
   ansible.builtin.file:
     path: "/home/{{ frame_desktop_user | default(ansible_user) }}/.config/autostart"

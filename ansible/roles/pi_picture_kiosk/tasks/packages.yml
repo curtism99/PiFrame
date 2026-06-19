@@ -9,7 +9,21 @@
       - npm
       - rsync
       - smbclient
-      - unclutter
       - xdotool
     state: present
     update_cache: true
+
+- name: Install optional X11 cursor helper
+  ansible.builtin.apt:
+    name: unclutter
+    state: present
+    install_recommends: false
+  when: frame_install_unclutter | default(false) | bool
+
+- name: Remove X11 cursor helpers when disabled
+  ansible.builtin.apt:
+    name:
+      - unclutter
+      - unclutter-startup
+    state: absent
+  when: not (frame_install_unclutter | default(false) | bool)

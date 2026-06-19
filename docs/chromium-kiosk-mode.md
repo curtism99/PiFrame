@@ -24,8 +24,8 @@ command -v chromium
 
 The Ansible role installs `/opt/pi-picture-kiosk/scripts/start-kiosk-browser.sh`.
 That launcher finds either `chromium-browser` or `chromium`, waits briefly for
-`http://localhost:8080/api/health`, hides the pointer with `unclutter`, and then
-opens the kiosk page.
+`http://localhost:8080/api/health`, and then opens the kiosk page. Pointer
+hiding is handled in the app by default.
 
 ## Boot Autostart
 
@@ -58,34 +58,61 @@ Useful SSH commands:
 ```bash
 sudo systemctl restart pi-picture-kiosk.service
 DISPLAY=:0 xdotool key F5
+/opt/pi-picture-kiosk/scripts/kiosk-control.sh status
+/opt/pi-picture-kiosk/scripts/kiosk-control.sh refresh
+/opt/pi-picture-kiosk/scripts/kiosk-control.sh restart-browser
 tail -f ~/.local/state/pi-picture-kiosk/kiosk-browser.log
 pgrep -a chromium
-pkill unclutter
 ```
 
 Restarting the Node service does not automatically reload an already-open
 Chromium page. Use the `xdotool` refresh command above, or reboot the Pi, after
 frontend deploys.
 
+The preferred keyboardless control path is the deployed control script:
+
+```bash
+/opt/pi-picture-kiosk/scripts/kiosk-control.sh status
+/opt/pi-picture-kiosk/scripts/kiosk-control.sh refresh
+/opt/pi-picture-kiosk/scripts/kiosk-control.sh restart-backend
+/opt/pi-picture-kiosk/scripts/kiosk-control.sh restart-browser
+/opt/pi-picture-kiosk/scripts/kiosk-control.sh logs
+```
+
+Run the script from SSH as the desktop login user so it has the same display
+session and Chromium profile as the kiosk launcher.
+
 ## Cursor Hiding
 
-The web app hides the pointer after `display.cursor_idle_seconds` when
-`display.hide_cursor` is enabled. Moving the mouse makes the pointer visible
-again until it is idle. The launcher also starts `unclutter` with the same idle
-delay as a desktop-level helper.
+The kiosk page starts with the pointer hidden and keeps it hidden when
+`display.hide_cursor` is enabled. Moving or clicking the mouse makes the pointer
+visible again until it is idle for `display.cursor_idle_seconds`.
 
 For Pi deployment, tune these in `ansible/group_vars/frames.yml`:
 
 ```yaml
 frame_hide_cursor: true
 frame_cursor_idle_seconds: 3
+# Optional X11-only desktop cursor helper. Keep disabled on labwc/Wayland unless verified.
+frame_install_unclutter: false
+# Optional; only enable after verifying XWayland works on the frame.
+# frame_chromium_ozone_platform: "x11"
 ```
+
+When `frame_chromium_ozone_platform` is set to `x11`, Chromium runs through
+X11/XWayland, which can let X11 tools such as `xdotool` refresh the kiosk from
+SSH. Leave this unset if Chromium fails to auto-start or exits immediately on
+the frame.
+
+`unclutter` is disabled by default because the classic X11 package and its
+`unclutter-startup` companion can install Xsession startup hooks that fail under
+Raspberry Pi OS labwc/Wayland. Only set `frame_install_unclutter: true` after
+verifying the frame runs a working X11 session.
 
 If you need normal desktop mouse behavior while troubleshooting:
 
 ```bash
 pkill chromium
-pkill unclutter
 ```
 
 ## Keyring Prompt

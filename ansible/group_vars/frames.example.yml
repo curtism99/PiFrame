@@ -31,6 +31,13 @@ frame_sync_interval_minutes: 15
 frame_display_mode: "slideshow"
 frame_hide_cursor: true
 frame_cursor_idle_seconds: 3
+# Optional X11-only desktop cursor helper. Keep disabled on Raspberry Pi OS
+# labwc/Wayland unless verified; the app hides the pointer by default.
+frame_install_unclutter: false
+# Optional: force Chromium through a specific ozone platform. Leave unset unless
+# you have verified the platform works on the frame; "x11" requires working
+# XWayland under labwc.
+# frame_chromium_ozone_platform: "x11"
 frame_clock_enabled: true
 frame_clock_position: "top-left"
 frame_auto_mode_enabled: false
