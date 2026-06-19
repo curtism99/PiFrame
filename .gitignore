@@ -17,3 +17,8 @@ sample-media/**/*.mp4
 sample-media/**/*.webm
 sample-media/**/*.mkv
 !sample-media/**/.gitkeep
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
