@@ -7,6 +7,9 @@ export class AmbienceMode {
     this.emptyState = emptyState;
     this.config = config;
     this.videos = manifest.ambience?.videos ?? [];
+    this.groups = normalizeAmbienceGroups(manifest.ambience);
+    this.groupPicker = new MediaPicker(this.groups, config.ambience?.shuffle !== false);
+    this.groupVideoPickers = new Map();
     this.picker = new MediaPicker(this.videos, config.ambience?.shuffle !== false);
     this.timer = null;
   }
@@ -34,7 +37,7 @@ export class AmbienceMode {
   }
 
   showNext() {
-    const item = this.picker.next();
+    const item = this.nextItem();
     if (!item) {
       return;
     }
@@ -59,4 +62,41 @@ export class AmbienceMode {
     const minutes = Number(this.config.ambience?.video_duration_minutes) || 30;
     this.timer = window.setTimeout(() => this.showNext(), minutes * 60 * 1000);
   }
+
+  nextItem() {
+    for (let attempt = 0; attempt < this.groups.length; attempt += 1) {
+      const group = this.groupPicker.next();
+      if (!group) {
+        break;
+      }
+
+      const picker = this.videoPickerForGroup(group);
+      const item = picker.next();
+      if (item) {
+        return item;
+      }
+    }
+
+    return this.picker.next();
+  }
+
+  videoPickerForGroup(group) {
+    if (!this.groupVideoPickers.has(group.id)) {
+      this.groupVideoPickers.set(group.id, new MediaPicker(group.videos, this.config.ambience?.shuffle !== false));
+    }
+
+    return this.groupVideoPickers.get(group.id);
+  }
+}
+
+function normalizeAmbienceGroups(ambience = {}) {
+  const groups = Array.isArray(ambience.groups) ? ambience.groups : [];
+  return groups
+    .map((group) => ({
+      id: group.id ?? group.path ?? group.label,
+      label: group.label ?? group.path ?? group.id,
+      path: group.path ?? group.id,
+      videos: Array.isArray(group.videos) ? group.videos : []
+    }))
+    .filter((group) => group.id && group.videos.length > 0);
 }

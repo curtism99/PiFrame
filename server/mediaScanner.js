@@ -14,7 +14,9 @@ export async function scanMedia(config, projectRoot) {
   const slideshowDirs = await resolvePlaylistDirs(config, mediaRoot, "slideshow");
   const ambienceDirs = await resolvePlaylistDirs(config, mediaRoot, "ambience");
   const slideshowItems = await scanDirs(mediaRoot, mediaAssetRoot, slideshowDirs, allMediaExtensions, "slideshow", imageExtensions);
-  const ambienceVideos = await scanDirs(mediaRoot, mediaAssetRoot, ambienceDirs, videoExtensions, "ambience", imageExtensions);
+  const ambienceGroups = await scanAmbienceGroups(mediaRoot, mediaAssetRoot, ambienceDirs, videoExtensions, imageExtensions);
+  const ambienceVideos = uniqueMediaItems(ambienceGroups.flatMap((group) => group.videos))
+    .sort((a, b) => a.url.localeCompare(b.url));
   const slideshowPhotos = slideshowItems.filter((item) => item.type === "image");
   const slideshowVideos = slideshowItems.filter((item) => item.type === "video");
   const warnings = [];
@@ -42,12 +44,16 @@ export async function scanMedia(config, projectRoot) {
       photos: slideshowPhotos,
       videos: slideshowVideos
     },
-    ambience: { videos: ambienceVideos },
+    ambience: {
+      videos: ambienceVideos,
+      groups: ambienceGroups
+    },
     counts: {
       photos: slideshowPhotos.length,
       videos: allVideos.length,
       slideshow_items: slideshowItems.length,
-      ambience_videos: ambienceVideos.length
+      ambience_videos: ambienceVideos.length,
+      ambience_groups: ambienceGroups.length
     },
     warnings
   };
@@ -103,6 +109,40 @@ async function scanDirs(mediaRoot, mediaAssetRoot, relativeDirs, extensions, cat
   return uniqueMediaItems(found).sort((a, b) => a.url.localeCompare(b.url));
 }
 
+async function scanAmbienceGroups(mediaRoot, mediaAssetRoot, relativeDirs, extensions, imageExtensions) {
+  const groups = new Map();
+
+  for (const relativeDir of relativeDirs ?? []) {
+    const absoluteDir = path.resolve(mediaRoot, relativeDir);
+    if (!isInside(mediaRoot, absoluteDir)) {
+      continue;
+    }
+
+    const items = await walkMedia(mediaRoot, mediaAssetRoot, absoluteDir, extensions, "ambience", imageExtensions);
+    for (const item of items) {
+      const groupPath = ambienceGroupPath(relativeDir, item.source_path);
+      if (!groups.has(groupPath)) {
+        groups.set(groupPath, {
+          id: groupPath,
+          label: labelFromPath(groupPath),
+          path: groupPath,
+          videos: []
+        });
+      }
+
+      groups.get(groupPath).videos.push(item);
+    }
+  }
+
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      videos: uniqueMediaItems(group.videos).sort((a, b) => a.url.localeCompare(b.url))
+    }))
+    .filter((group) => group.videos.length > 0)
+    .sort((a, b) => a.path.localeCompare(b.path));
+}
+
 async function walkMedia(mediaRoot, mediaAssetRoot, currentDir, extensions, category, imageExtensions) {
   let entries = [];
   try {
@@ -130,6 +170,7 @@ async function walkMedia(mediaRoot, mediaAssetRoot, currentDir, extensions, cate
 
     const stats = await fs.stat(absolutePath);
     const relativePath = mediaUrlPath(mediaRoot, mediaAssetRoot, absolutePath);
+    const sourcePath = slashPath(path.relative(mediaRoot, absolutePath));
     const type = imageExtensions.has(extension) ? "image" : "video";
     const media = {
       url: `/media/${relativePath.split("/").map(encodeURIComponent).join("/")}`,
@@ -137,6 +178,8 @@ async function walkMedia(mediaRoot, mediaAssetRoot, currentDir, extensions, cate
       name: entry.name,
       extension,
       category,
+      source_path: sourcePath,
+      directory: slashPath(path.dirname(sourcePath)),
       mtime: stats.mtime.toISOString(),
       size_bytes: stats.size
     };
@@ -153,6 +196,30 @@ async function walkMedia(mediaRoot, mediaAssetRoot, currentDir, extensions, cate
 
 function slashPath(value) {
   return value.split(path.sep).join("/");
+}
+
+function ambienceGroupPath(relativeDir, sourcePath) {
+  const normalizedDir = slashPath(path.normalize(relativeDir));
+  const sourceDir = slashPath(path.dirname(sourcePath));
+  const relativeFromDir = path.posix.relative(normalizedDir, sourceDir);
+
+  if (!relativeFromDir || relativeFromDir === ".") {
+    return normalizedDir;
+  }
+
+  const [firstSegment] = relativeFromDir.split("/");
+  if (!firstSegment || firstSegment.startsWith("..")) {
+    return normalizedDir;
+  }
+
+  return `${normalizedDir}/${firstSegment}`;
+}
+
+function labelFromPath(value) {
+  const lastSegment = value.split("/").filter(Boolean).pop() ?? value;
+  return lastSegment
+    .replace(/[-_]+/g, " ")
+    .replace(/\b[a-z]/g, (match) => match.toUpperCase());
 }
 
 export function getMediaAssetRoot(config, mediaRoot) {

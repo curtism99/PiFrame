@@ -61,6 +61,29 @@ or a curated set of subfolders:
 }
 ```
 
+Ambience playlist entries also become playback groups. If the ambience playlist
+contains the broad `media/videos` folder, each immediate child folder becomes a
+separate ambience group, such as `abstract`, `clouds`, or `underwater`.
+
+```json
+{
+  "ambience": [
+    "media/videos"
+  ]
+}
+```
+
+You can also list curated ambience folders directly:
+
+```json
+{
+  "ambience": [
+    "media/videos/abstract",
+    "media/videos/underwater"
+  ]
+}
+```
+
 The local cache root contains both `media/` and `playlists/`. The Express static
 route serves the `media/` subfolder at `/media`, so a cached file at
 `media/photos/family/example.jpg` is displayed from:

@@ -73,7 +73,11 @@ Example playlists:
 ```
 
 Each playlist entry is recursive. Adding `media/photos` includes all nested
-photo albums below that folder.
+photo albums below that folder. Ambience entries are also preserved as playback
+groups; listing `media/videos` groups videos by immediate child folders, while
+listing `media/videos/fireplace` and `media/videos/clouds` keeps those folders
+as separate ambience categories.
+
 If a playlist file is missing or invalid, the app falls back to scanning
 `media/photos` for slideshow and `media/videos` for ambience.
 
