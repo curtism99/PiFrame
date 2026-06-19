@@ -1,0 +1,25 @@
+---
+- name: Create config directory
+  ansible.builtin.file:
+    path: "{{ frame_config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Template kiosk config
+  ansible.builtin.template:
+    src: config.json.j2
+    dest: "{{ frame_config_dir }}/config.json"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart pi picture kiosk
+
+- name: Template SMB credentials
+  ansible.builtin.template:
+    src: smb-credentials.j2
+    dest: "{{ frame_nas_credentials_file }}"
+    owner: root
+    group: root
+    mode: "0600"

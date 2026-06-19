@@ -1,0 +1,48 @@
+frame_device_name: piframe-office
+frame_location: office
+frame_server_host: "0.0.0.0"
+frame_server_port: 8080
+
+frame_media_root: "/srv/pi-picture-kiosk/media"
+frame_app_dir: "/opt/pi-picture-kiosk"
+frame_config_dir: "/etc/pi-picture-kiosk"
+frame_state_dir: "/var/lib/pi-picture-kiosk"
+frame_kiosk_user: "piframe"
+# Desktop login user that owns Chromium autostart. Defaults to ansible_user in the role.
+# Set this only if the Pi desktop logs in as a different user than SSH.
+# frame_desktop_user: "curtis"
+# frame_desktop_group: "curtis"
+# Set true on dedicated kiosk Pis so Raspberry Pi OS logs into the desktop
+# automatically and starts Chromium without a keyboard or mouse.
+frame_enable_desktop_autologin: true
+
+# The role writes this to /etc/hosts so SMB can use a readable name without
+# depending on Pi-hole, router DNS quirks, NetBIOS, mDNS, or .home.arpa.
+frame_nas_ip: "192.168.0.10"
+frame_nas_hostname: "nas-ds223"
+frame_nas_aliases:
+  - "NAS-DS223"
+frame_nas_source: "//nas-ds223/PiFrame-Media"
+frame_nas_source_subdir: "office"
+frame_nas_mount_point: "/mnt/pi-picture-kiosk-source"
+frame_nas_credentials_file: "/etc/pi-picture-kiosk/smb-credentials"
+frame_sync_interval_minutes: 15
+
+frame_display_mode: "slideshow"
+frame_hide_cursor: true
+frame_cursor_idle_seconds: 3
+frame_clock_enabled: true
+frame_clock_position: "top-left"
+frame_auto_mode_enabled: false
+
+frame_weather_enabled: true
+frame_weather_position: "top-right"
+frame_weather_latitude: 40.6892
+frame_weather_longitude: -74.0445
+frame_weather_units: "fahrenheit"
+frame_weather_test_alerts_enabled: false
+
+# Store real values in an ignored vars file or Ansible Vault.
+frame_smb_username: "CHANGE_ME"
+frame_smb_password: "CHANGE_ME"
+frame_smb_domain: ""

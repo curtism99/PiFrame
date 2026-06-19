@@ -1,0 +1,90 @@
+{
+  "device_name": "piframe-office",
+  "location": "office",
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080
+  },
+  "media": {
+    "root": "sample-media",
+    "asset_base_dir": "media",
+    "fallback_dirs": {
+      "slideshow": ["media/photos"],
+      "ambience": ["media/videos"]
+    },
+    "allowed_image_extensions": [".jpg", ".jpeg", ".png", ".webp"],
+    "allowed_video_extensions": [".mp4", ".webm", ".mkv"]
+  },
+  "playlists": {
+    "slideshow": "playlists/slideshow.json",
+    "ambience": "playlists/ambience.json"
+  },
+  "display": {
+    "orientation": "landscape",
+    "mode": "slideshow",
+    "hide_cursor": true,
+    "transition_seconds": 3
+  },
+  "slideshow": {
+    "photo_duration_seconds": 20,
+    "shuffle": true,
+    "image_fit": "smart-frame",
+    "show_filename": false,
+    "transition_effects": {
+      "enabled": true,
+      "style": "random",
+      "effects": ["fade", "dissolve", "dip"]
+    }
+  },
+  "ambience": {
+    "video_duration_minutes": 30,
+    "shuffle": true,
+    "muted": true
+  },
+  "auto_mode": {
+    "enabled": false,
+    "strategy": "weighted-random",
+    "switch_mode_every_minutes": 30,
+    "weights": {
+      "slideshow": 70,
+      "ambience": 30
+    }
+  },
+  "clock": {
+    "enabled": true,
+    "format": "12h",
+    "show_date": true,
+    "position": "top-left"
+  },
+  "widgets": {
+    "weather": {
+      "enabled": true,
+      "provider": "nws",
+      "position": "top-right",
+      "latitude": 40.6892,
+      "longitude": -74.0445,
+      "units": "fahrenheit",
+      "refresh_minutes": 10,
+      "stale_after_minutes": 90,
+      "forecast_cycle_seconds": 25,
+      "max_alerts": 3,
+      "user_agent": "PiFrame/piframe-office",
+      "test_alerts": {
+        "enabled": false
+      }
+    }
+  },
+  "nas_sync": {
+    "enabled": true,
+    "method": "smb-rsync",
+    "source": "//nas-ds223/PiFrame-Media",
+    "source_subdir": "office",
+    "mount_point": "/mnt/pi-picture-kiosk-source",
+    "local_cache": "/srv/pi-picture-kiosk/media",
+    "sync_interval_minutes": 15,
+    "credentials_file": "/etc/pi-picture-kiosk/smb-credentials"
+  },
+  "runtime_state": {
+    "path": ".runtime/state.json"
+  }
+}

@@ -1,0 +1,18 @@
+[Unit]
+Description=Pi Picture Kiosk
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ frame_kiosk_user }}
+Group={{ frame_kiosk_user }}
+WorkingDirectory={{ frame_app_dir }}
+Environment=NODE_ENV=production
+Environment=PIFRAME_CONFIG_PATH={{ frame_config_dir }}/config.json
+ExecStart=/usr/bin/node server/server.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

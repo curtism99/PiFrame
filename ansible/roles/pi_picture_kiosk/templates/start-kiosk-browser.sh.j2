@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+set -u
+
+APP_URL="http://localhost:{{ frame_server_port }}"
+HEALTH_URL="${APP_URL}/api/health"
+LOG_DIR="${HOME}/.local/state/pi-picture-kiosk"
+LOG_FILE="${LOG_DIR}/kiosk-browser.log"
+PROFILE_DIR="${HOME}/.config/pi-picture-kiosk/chromium-profile"
+LOCK_FILE="/tmp/pi-picture-kiosk-browser.lock"
+
+mkdir -p "${LOG_DIR}" "${PROFILE_DIR}"
+
+log() {
+  printf '%s %s\n' "$(date --iso-8601=seconds)" "$*" | tee -a "${LOG_FILE}"
+}
+
+exec 9>"${LOCK_FILE}"
+if command -v flock >/dev/null 2>&1; then
+  if ! flock -n 9; then
+    log "Kiosk browser launcher is already running"
+    exit 0
+  fi
+fi
+
+if pgrep -f "${PROFILE_DIR}" >/dev/null 2>&1; then
+  log "Chromium kiosk already appears to be running for ${PROFILE_DIR}"
+  exit 0
+fi
+
+if command -v unclutter >/dev/null 2>&1; then
+  if ! pgrep -x unclutter >/dev/null 2>&1; then
+    log "Starting unclutter with {{ frame_cursor_idle_seconds | default(3) }} second idle delay"
+    unclutter -idle {{ frame_cursor_idle_seconds | default(3) }} -root >/dev/null 2>&1 &
+  else
+    log "unclutter is already running"
+  fi
+else
+  log "unclutter is not installed; relying on app cursor hiding"
+fi
+
+for attempt in $(seq 1 60); do
+  if curl -fsS "${HEALTH_URL}" >/dev/null 2>&1; then
+    log "Kiosk backend is ready at ${HEALTH_URL}"
+    break
+  fi
+
+  if [ "${attempt}" -eq 60 ]; then
+    log "Kiosk backend did not answer after waiting; launching Chromium anyway"
+    break
+  fi
+
+  sleep 2
+done
+
+if command -v chromium-browser >/dev/null 2>&1; then
+  CHROMIUM="$(command -v chromium-browser)"
+elif command -v chromium >/dev/null 2>&1; then
+  CHROMIUM="$(command -v chromium)"
+else
+  log "Could not find chromium-browser or chromium"
+  exit 1
+fi
+
+log "Launching Chromium with ${CHROMIUM}"
+
+if command -v flock >/dev/null 2>&1; then
+  flock -u 9 || true
+fi
+exec 9>&-
+
+"${CHROMIUM}" \
+  --kiosk \
+  --app="${APP_URL}" \
+  --noerrdialogs \
+  --disable-infobars \
+  --disable-session-crashed-bubble \
+  --check-for-update-interval=31536000 \
+  --autoplay-policy=no-user-gesture-required \
+  --password-store=basic \
+  --user-data-dir="${PROFILE_DIR}" \
+  >>"${LOG_FILE}" 2>&1
+
+status=$?
+log "Chromium exited with status ${status}"
+exit "${status}"

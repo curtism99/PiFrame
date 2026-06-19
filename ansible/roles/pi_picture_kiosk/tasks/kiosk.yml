@@ -1,0 +1,45 @@
+---
+- name: Install Chromium kiosk launcher
+  ansible.builtin.template:
+    src: start-kiosk-browser.sh.j2
+    dest: "{{ frame_app_dir }}/scripts/start-kiosk-browser.sh"
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Create autostart directory
+  ansible.builtin.file:
+    path: "/home/{{ frame_desktop_user | default(ansible_user) }}/.config/autostart"
+    state: directory
+    owner: "{{ frame_desktop_user | default(ansible_user) }}"
+    group: "{{ frame_desktop_group | default(frame_desktop_user | default(ansible_user)) }}"
+    mode: "0755"
+
+- name: Install Chromium kiosk autostart
+  ansible.builtin.template:
+    src: kiosk-autostart.desktop.j2
+    dest: "/home/{{ frame_desktop_user | default(ansible_user) }}/.config/autostart/pi-picture-kiosk.desktop"
+    owner: "{{ frame_desktop_user | default(ansible_user) }}"
+    group: "{{ frame_desktop_group | default(frame_desktop_user | default(ansible_user)) }}"
+    mode: "0644"
+
+- name: Create labwc autostart directory
+  ansible.builtin.file:
+    path: "/home/{{ frame_desktop_user | default(ansible_user) }}/.config/labwc"
+    state: directory
+    owner: "{{ frame_desktop_user | default(ansible_user) }}"
+    group: "{{ frame_desktop_group | default(frame_desktop_user | default(ansible_user)) }}"
+    mode: "0755"
+
+- name: Install labwc Chromium kiosk autostart
+  ansible.builtin.template:
+    src: labwc-autostart.j2
+    dest: "/home/{{ frame_desktop_user | default(ansible_user) }}/.config/labwc/autostart"
+    owner: "{{ frame_desktop_user | default(ansible_user) }}"
+    group: "{{ frame_desktop_group | default(frame_desktop_user | default(ansible_user)) }}"
+    mode: "0755"
+
+- name: Optionally enable Raspberry Pi desktop autologin
+  ansible.builtin.command: raspi-config nonint do_boot_behaviour B4
+  when: frame_enable_desktop_autologin | default(false) | bool
+  changed_when: false

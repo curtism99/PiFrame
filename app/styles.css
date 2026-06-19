@@ -1,0 +1,355 @@
+:root {
+  color-scheme: dark;
+  --bg: #050506;
+  --panel: rgba(10, 12, 14, 0.72);
+  --text: #f6f4ef;
+  --muted: #b7bcc4;
+  --shadow: 0 22px 70px rgba(0, 0, 0, 0.5);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+html.hide-cursor,
+html.hide-cursor body,
+html.hide-cursor * {
+  cursor: none !important;
+}
+
+.kiosk-shell,
+.media-stage,
+.layer,
+.ambience-video {
+  position: fixed;
+  inset: 0;
+}
+
+.media-stage {
+  background: #050506;
+  isolation: isolate;
+}
+
+.layer {
+  opacity: 0;
+  filter: none;
+  z-index: 1;
+  transition:
+    opacity var(--transition-seconds, 2s) ease,
+    filter var(--transition-seconds, 2s) ease;
+  will-change: opacity, filter;
+}
+
+.layer.is-visible {
+  opacity: 1;
+  filter: none;
+  z-index: 2;
+}
+
+.layer.is-exiting {
+  opacity: 0;
+  z-index: 1;
+}
+
+.layer.transition-dissolve {
+  filter: blur(10px) brightness(0.9);
+}
+
+.layer.transition-dissolve.is-visible {
+  filter: blur(0) brightness(1);
+}
+
+.layer.transition-dissolve.is-exiting {
+  opacity: 0;
+  filter: blur(10px) brightness(0.9);
+}
+
+.layer.transition-dip {
+  transition:
+    opacity var(--transition-seconds, 2s) ease,
+    filter var(--transition-seconds, 2s) ease;
+}
+
+.layer.transition-dip.is-exiting {
+  opacity: 0;
+  filter: brightness(0.45);
+}
+
+.photo-bg,
+.photo-fg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.photo-bg {
+  object-fit: cover;
+  filter: blur(34px) brightness(0.58) saturate(0.95);
+  transform: scale(1.08);
+}
+
+.photo-fg {
+  object-fit: contain;
+  margin: auto;
+  padding: clamp(18px, 3vw, 54px);
+  filter: drop-shadow(0 18px 46px rgba(0, 0, 0, 0.55));
+}
+
+.fit-cover .photo-fg,
+.fit-cover.single-photo {
+  object-fit: cover;
+  padding: 0;
+}
+
+.fit-contain .photo-bg {
+  display: none;
+}
+
+.fit-contain .photo-fg,
+.fit-contain.single-photo {
+  object-fit: contain;
+  padding: 0;
+}
+
+.ambience-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #050506;
+}
+
+.empty-state {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: min(620px, calc(100vw - 48px));
+  transform: translate(-50%, -50%);
+  text-align: center;
+  padding: 28px;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.empty-state h1 {
+  margin: 0 0 10px;
+  font-size: clamp(28px, 4vw, 46px);
+  line-height: 1.05;
+}
+
+.empty-state p {
+  margin: 0;
+  color: var(--muted);
+  font-size: clamp(16px, 1.7vw, 20px);
+  line-height: 1.45;
+}
+
+.widget-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.widget-zone {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: min(420px, calc(100vw - 36px));
+}
+
+.widget-zone.bottom-right {
+  right: clamp(18px, 2vw, 32px);
+  bottom: clamp(18px, 2vw, 32px);
+  align-items: flex-end;
+}
+
+.widget-zone.bottom-left {
+  left: clamp(18px, 2vw, 32px);
+  bottom: clamp(18px, 2vw, 32px);
+  align-items: flex-start;
+}
+
+.widget-zone.top-right {
+  right: clamp(18px, 2vw, 32px);
+  top: clamp(18px, 2vw, 32px);
+  align-items: flex-end;
+}
+
+.widget-zone.top-left {
+  left: clamp(18px, 2vw, 32px);
+  top: clamp(18px, 2vw, 32px);
+  align-items: flex-start;
+}
+
+.widget-card {
+  z-index: 20;
+  min-width: 138px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.42);
+  color: rgba(255, 255, 255, 0.94);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(8px);
+}
+
+.clock-widget {
+  text-align: right;
+}
+
+.clock-time {
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(28px, 3.2vw, 54px);
+  line-height: 1;
+}
+
+.clock-date {
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: clamp(13px, 1.2vw, 18px);
+}
+
+.weather-widget {
+  width: min(390px, calc(100vw - 36px));
+  padding: 12px;
+}
+
+.weather-current {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.weather-temp {
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(34px, 4vw, 62px);
+  line-height: 0.95;
+}
+
+.weather-meta {
+  min-width: 0;
+  font-size: clamp(14px, 1.25vw, 18px);
+  line-height: 1.25;
+}
+
+.weather-meta span,
+.weather-section-title,
+.weather-empty,
+.weather-row em,
+.weather-alert-time {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.weather-meta span,
+.weather-section-title {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.weather-forecast {
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.weather-row {
+  display: grid;
+  grid-template-columns: 54px 68px minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+  min-height: 24px;
+  font-size: 14px;
+}
+
+.weather-row strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.weather-row em {
+  overflow: hidden;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weather-alerts {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.weather-alerts.is-clear {
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 13px;
+}
+
+.weather-alert {
+  padding: 8px 9px;
+  border-left: 5px solid rgba(255, 255, 255, 0.7);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.weather-alert-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.weather-alert-heading span {
+  flex: none;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.22);
+  padding: 2px 5px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.weather-alert-time {
+  margin-top: 3px;
+  font-size: 13px;
+}
+
+.alert-tornado-warning {
+  border-color: #ff3b30;
+  background: rgba(140, 0, 0, 0.72);
+}
+
+.alert-severe-thunderstorm {
+  border-color: #ffcc00;
+  background: rgba(116, 68, 0, 0.72);
+}
+
+.alert-tornado-watch {
+  border-color: #ff7a18;
+  background: rgba(88, 46, 0, 0.68);
+}
+
+.alert-warning {
+  border-color: #ffd27d;
+}
+
+.alert-watch {
+  border-color: #9ecbff;
+}

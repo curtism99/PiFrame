@@ -1,0 +1,14 @@
+[Unit]
+Description=Sync PiFrame media from NAS
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=PIFRAME_NAS_SOURCE=//nas-ds223/PiFrame-Media
+Environment=PIFRAME_NAS_SOURCE_SUBDIR=office
+Environment=PIFRAME_NAS_MOUNT_POINT=/mnt/pi-picture-kiosk-source
+Environment=PIFRAME_LOCAL_CACHE=/srv/pi-picture-kiosk/media
+Environment=PIFRAME_CREDENTIALS_FILE=/etc/pi-picture-kiosk/smb-credentials
+Environment=PIFRAME_STATE_FILE=/var/lib/pi-picture-kiosk/state.json
+ExecStart=/opt/pi-picture-kiosk/scripts/sync-from-nas.sh

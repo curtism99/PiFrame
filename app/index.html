@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pi Picture Kiosk</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main id="app" class="kiosk-shell">
+      <section id="stage" class="media-stage" aria-live="polite"></section>
+      <section id="empty-state" class="empty-state" hidden>
+        <h1>No media found</h1>
+        <p>Add photos or videos to the local cache, then refresh the manifest.</p>
+      </section>
+      <section id="widget-layer" class="widget-layer" aria-live="polite"></section>
+    </main>
+    <script type="module" src="/js/main.js"></script>
+  </body>
+</html>

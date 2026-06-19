@@ -1,0 +1,7 @@
+---
+- import_tasks: packages.yml
+- import_tasks: app.yml
+- import_tasks: config.yml
+- import_tasks: sync.yml
+- import_tasks: systemd.yml
+- import_tasks: kiosk.yml

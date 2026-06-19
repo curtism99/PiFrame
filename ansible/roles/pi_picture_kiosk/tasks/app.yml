@@ -1,0 +1,54 @@
+---
+- name: Create kiosk user
+  ansible.builtin.user:
+    name: "{{ frame_kiosk_user }}"
+    system: true
+    create_home: true
+    shell: /usr/sbin/nologin
+
+- name: Create application directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ frame_kiosk_user }}"
+    group: "{{ frame_kiosk_user }}"
+    mode: "0755"
+  loop:
+    - "{{ frame_app_dir }}"
+    - "{{ frame_media_root }}"
+    - "{{ frame_state_dir }}"
+
+- name: Deploy application files
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../{{ item }}/"
+    dest: "{{ frame_app_dir }}/{{ item }}/"
+    owner: "{{ frame_kiosk_user }}"
+    group: "{{ frame_kiosk_user }}"
+    mode: preserve
+  loop:
+    - app
+    - admin
+    - server
+    - scripts
+    - config
+  notify: Restart pi picture kiosk
+
+- name: Deploy package metadata
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../{{ item }}"
+    dest: "{{ frame_app_dir }}/{{ item }}"
+    owner: "{{ frame_kiosk_user }}"
+    group: "{{ frame_kiosk_user }}"
+    mode: "0644"
+  loop:
+    - package.json
+    - package-lock.json
+  notify: Restart pi picture kiosk
+
+- name: Install npm dependencies
+  ansible.builtin.command: npm install --omit=dev
+  args:
+    chdir: "{{ frame_app_dir }}"
+    creates: "{{ frame_app_dir }}/node_modules/express"
+  become_user: "{{ frame_kiosk_user }}"
+  notify: Restart pi picture kiosk

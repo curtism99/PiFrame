@@ -1,0 +1,10 @@
+[Unit]
+Description=Run PiFrame media sync on a timer
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
