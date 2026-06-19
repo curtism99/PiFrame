@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "PiFrame",
+  "project_id": "07a17fd5-7d06-424d-ad04-eb31f9a4dc94"
+}
