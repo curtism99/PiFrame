@@ -13,8 +13,10 @@ export async function scanMedia(config, projectRoot) {
 
   const slideshowDirs = await resolvePlaylistDirs(config, mediaRoot, "slideshow");
   const ambienceDirs = await resolvePlaylistDirs(config, mediaRoot, "ambience");
-  const slideshowItems = await scanDirs(mediaRoot, mediaAssetRoot, slideshowDirs, allMediaExtensions, "slideshow", imageExtensions);
-  const ambienceGroups = await scanAmbienceGroups(mediaRoot, mediaAssetRoot, ambienceDirs, videoExtensions, imageExtensions);
+  const slideshowGroups = await scanMediaGroups(mediaRoot, mediaAssetRoot, slideshowDirs, allMediaExtensions, "slideshow", imageExtensions);
+  const slideshowItems = uniqueMediaItems(slideshowGroups.flatMap((group) => group.items))
+    .sort((a, b) => a.url.localeCompare(b.url));
+  const ambienceGroups = await scanMediaGroups(mediaRoot, mediaAssetRoot, ambienceDirs, videoExtensions, "ambience", imageExtensions);
   const ambienceVideos = uniqueMediaItems(ambienceGroups.flatMap((group) => group.videos))
     .sort((a, b) => a.url.localeCompare(b.url));
   const slideshowPhotos = slideshowItems.filter((item) => item.type === "image");
@@ -42,7 +44,8 @@ export async function scanMedia(config, projectRoot) {
     slideshow: {
       items: slideshowItems,
       photos: slideshowPhotos,
-      videos: slideshowVideos
+      videos: slideshowVideos,
+      groups: slideshowGroups
     },
     ambience: {
       videos: ambienceVideos,
@@ -52,6 +55,7 @@ export async function scanMedia(config, projectRoot) {
       photos: slideshowPhotos.length,
       videos: allVideos.length,
       slideshow_items: slideshowItems.length,
+      slideshow_groups: slideshowGroups.length,
       ambience_videos: ambienceVideos.length,
       ambience_groups: ambienceGroups.length
     },
@@ -63,26 +67,28 @@ async function resolvePlaylistDirs(config, mediaRoot, mode) {
   const playlistConfig = config.playlists ?? {};
   const playlistFile = playlistConfig[mode];
   const fallbackDirs = config.media?.fallback_dirs?.[mode] ?? legacyFallbackDirs(config, mode);
+  const configuredDirs = uniqueRelativeDirs(fallbackDirs);
 
   if (!playlistFile) {
-    return fallbackDirs;
+    return configuredDirs;
   }
 
   const playlistPath = path.resolve(mediaRoot, playlistFile);
   if (!isInside(mediaRoot, playlistPath)) {
-    return fallbackDirs;
+    return configuredDirs;
   }
 
   try {
     const playlist = JSON.parse(await fs.readFile(playlistPath, "utf8"));
     const entries = Array.isArray(playlist) ? playlist : playlist[mode];
     if (!Array.isArray(entries)) {
-      return fallbackDirs;
+      return configuredDirs;
     }
 
-    return uniqueRelativeDirs(entries.filter((entry) => typeof entry === "string"));
+    const playlistDirs = entries.filter((entry) => typeof entry === "string");
+    return uniqueRelativeDirs([...configuredDirs, ...playlistDirs]);
   } catch {
-    return fallbackDirs;
+    return configuredDirs;
   }
 }
 
@@ -94,22 +100,10 @@ function legacyFallbackDirs(config, mode) {
 }
 
 function uniqueRelativeDirs(entries) {
-  return [...new Set(entries.map((entry) => slashPath(path.normalize(entry))).filter((entry) => entry && !entry.startsWith("..")))];
+  return [...new Set(entries.map(normalizeRelativeDir).filter(Boolean))];
 }
 
-async function scanDirs(mediaRoot, mediaAssetRoot, relativeDirs, extensions, category, imageExtensions) {
-  const found = [];
-  for (const relativeDir of relativeDirs ?? []) {
-    const absoluteDir = path.resolve(mediaRoot, relativeDir);
-    if (!isInside(mediaRoot, absoluteDir)) {
-      continue;
-    }
-    found.push(...(await walkMedia(mediaRoot, mediaAssetRoot, absoluteDir, extensions, category, imageExtensions)));
-  }
-  return uniqueMediaItems(found).sort((a, b) => a.url.localeCompare(b.url));
-}
-
-async function scanAmbienceGroups(mediaRoot, mediaAssetRoot, relativeDirs, extensions, imageExtensions) {
+async function scanMediaGroups(mediaRoot, mediaAssetRoot, relativeDirs, extensions, category, imageExtensions) {
   const groups = new Map();
 
   for (const relativeDir of relativeDirs ?? []) {
@@ -118,28 +112,35 @@ async function scanAmbienceGroups(mediaRoot, mediaAssetRoot, relativeDirs, exten
       continue;
     }
 
-    const items = await walkMedia(mediaRoot, mediaAssetRoot, absoluteDir, extensions, "ambience", imageExtensions);
+    const items = await walkMedia(mediaRoot, mediaAssetRoot, absoluteDir, extensions, category, imageExtensions);
     for (const item of items) {
-      const groupPath = ambienceGroupPath(relativeDir, item.source_path);
+      const groupPath = playlistGroupPath(relativeDir, item.source_path);
       if (!groups.has(groupPath)) {
         groups.set(groupPath, {
           id: groupPath,
           label: labelFromPath(groupPath),
           path: groupPath,
+          items: [],
+          photos: [],
           videos: []
         });
       }
 
-      groups.get(groupPath).videos.push(item);
+      groups.get(groupPath).items.push(item);
     }
   }
 
   return [...groups.values()]
-    .map((group) => ({
-      ...group,
-      videos: uniqueMediaItems(group.videos).sort((a, b) => a.url.localeCompare(b.url))
-    }))
-    .filter((group) => group.videos.length > 0)
+    .map((group) => {
+      const items = uniqueMediaItems(group.items).sort((a, b) => a.url.localeCompare(b.url));
+      return {
+        ...group,
+        items,
+        photos: items.filter((item) => item.type === "image"),
+        videos: items.filter((item) => item.type === "video")
+      };
+    })
+    .filter((group) => group.items.length > 0)
     .sort((a, b) => a.path.localeCompare(b.path));
 }
 
@@ -195,12 +196,25 @@ async function walkMedia(mediaRoot, mediaAssetRoot, currentDir, extensions, cate
 }
 
 function slashPath(value) {
-  return value.split(path.sep).join("/");
+  return value.replace(/\\/g, "/").split(path.sep).join("/");
 }
 
-function ambienceGroupPath(relativeDir, sourcePath) {
-  const normalizedDir = slashPath(path.normalize(relativeDir));
-  const sourceDir = slashPath(path.dirname(sourcePath));
+function normalizeRelativeDir(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  const normalized = path.posix.normalize(slashPath(value)).replace(/\/+$/, "");
+  if (!normalized || normalized === "." || normalized === ".." || normalized.startsWith("../") || normalized.startsWith("/")) {
+    return "";
+  }
+
+  return normalized;
+}
+
+function playlistGroupPath(relativeDir, sourcePath) {
+  const normalizedDir = normalizeRelativeDir(relativeDir);
+  const sourceDir = path.posix.dirname(slashPath(sourcePath));
   const relativeFromDir = path.posix.relative(normalizedDir, sourceDir);
 
   if (!relativeFromDir || relativeFromDir === ".") {

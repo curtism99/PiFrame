@@ -38,18 +38,24 @@ Pi cache media goes under:
     ambience.json
 ```
 
-Playlist entries are folder roots and are scanned recursively. This means a
-slideshow playlist can include one broad folder:
+The PiFrame config defines the default discovery roots, usually `media/photos`
+for slideshow and `media/videos` for ambience. Those roots are always scanned.
+Adding a new folder such as `media/videos/underwater` under the NAS media tree is
+enough for PiFrame to discover it after sync and manifest refresh.
+
+Synced playlist files are optional extra roots for unusual or cross-mode media,
+not the normal place to choose the active playlist. For example, a slideshow
+playlist file can add a video folder to slideshow rotation:
 
 ```json
 {
   "slideshow": [
-    "media/photos"
+    "media/videos/short-clips"
   ]
 }
 ```
 
-or a curated set of subfolders:
+or add a few specific folders outside the default discovery roots:
 
 ```json
 {
@@ -61,9 +67,10 @@ or a curated set of subfolders:
 }
 ```
 
-Ambience playlist entries also become playback groups. If the ambience playlist
-contains the broad `media/videos` folder, each immediate child folder becomes a
-separate ambience group, such as `abstract`, `clouds`, or `underwater`.
+Discovered directories become playback groups. Since `media/photos` and
+`media/videos` are default discovery roots, each immediate child folder becomes
+a separate group, such as photo albums for slideshow or ambience folders like
+`abstract`, `clouds`, or `underwater`.
 
 ```json
 {
@@ -73,7 +80,8 @@ separate ambience group, such as `abstract`, `clouds`, or `underwater`.
 }
 ```
 
-You can also list curated ambience folders directly:
+You can also list ambience folders directly. They are added to the default
+`media/videos` scan rather than replacing it:
 
 ```json
 {
@@ -83,6 +91,12 @@ You can also list curated ambience folders directly:
   ]
 }
 ```
+
+The admin page exposes these discovered groups as runtime playlist selectors for
+slideshow and ambience mode. Choosing `All` keeps the old flattened behavior;
+choosing a specific group limits that mode to the selected directory until it is
+changed again or the runtime state is reset. This selection is stored on the Pi,
+not in NAS playlist JSON.
 
 The local cache root contains both `media/` and `playlists/`. The Express static
 route serves the `media/` subfolder at `/media`, so a cached file at

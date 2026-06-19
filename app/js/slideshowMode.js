@@ -7,13 +7,17 @@ export class SlideshowMode {
     this.emptyState = emptyState;
     this.config = config;
     this.runtimeOptions = runtimeOptions;
-    this.items = manifest.slideshow?.items ?? manifest.slideshow?.photos ?? [];
-    this.picker = new MediaPicker(this.items, config.slideshow?.shuffle !== false);
+    this.shuffle = config.slideshow?.shuffle !== false;
+    this.groups = normalizeSlideshowGroups(manifest.slideshow);
+    this.allItems = manifest.slideshow?.items ?? manifest.slideshow?.photos ?? [];
     this.timer = null;
+    this.started = false;
+    this.configurePlaylist(runtimeOptions?.selected_playlists?.slideshow);
   }
 
   start() {
     this.stop();
+    this.started = true;
     if (this.items.length === 0) {
       this.stage.replaceChildren();
       this.emptyState.hidden = false;
@@ -27,18 +31,45 @@ export class SlideshowMode {
   stop() {
     window.clearTimeout(this.timer);
     this.timer = null;
+    this.started = false;
+    this.stage.querySelectorAll("video").forEach((video) => {
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
+    });
   }
 
   setRuntimeOptions(runtimeOptions = {}) {
     this.runtimeOptions = runtimeOptions;
-  }
-
-  showNext() {
-    const item = this.picker.next();
-    if (!item) {
+    const nextPlaylistId = runtimeOptions?.selected_playlists?.slideshow ?? null;
+    if (nextPlaylistId === this.selectedPlaylistId) {
       return;
     }
 
+    this.configurePlaylist(nextPlaylistId);
+    if (this.started) {
+      this.showNext();
+    }
+  }
+
+  configurePlaylist(selectedPlaylistId) {
+    this.selectedPlaylistId = selectedPlaylistId ?? null;
+    this.selectedGroup = selectedGroup(this.groups, this.selectedPlaylistId);
+    this.items = this.selectedGroup?.items ?? this.allItems;
+    this.picker = new MediaPicker(this.items, this.shuffle);
+  }
+
+  showNext() {
+    window.clearTimeout(this.timer);
+    this.timer = null;
+    const item = this.picker.next();
+    if (!item) {
+      this.stage.replaceChildren();
+      this.emptyState.hidden = false;
+      return;
+    }
+
+    this.emptyState.hidden = true;
     if (item.type === "video") {
       this.showVideo(item);
       return;
@@ -117,7 +148,7 @@ export class SlideshowMode {
   pickTransition() {
     const settings = {
       ...(this.config.slideshow?.transition_effects ?? {}),
-      ...(this.runtimeOptions ?? {})
+      ...(this.runtimeOptions?.slideshow_effects ?? this.runtimeOptions ?? {})
     };
 
     if (settings.enabled === false) {
@@ -156,4 +187,26 @@ async function waitForImage(image) {
     image.addEventListener("load", () => resolve(true), { once: true });
     image.addEventListener("error", () => resolve(false), { once: true });
   });
+}
+
+function normalizeSlideshowGroups(slideshow = {}) {
+  const groups = Array.isArray(slideshow.groups) ? slideshow.groups : [];
+  return groups
+    .map((group) => ({
+      id: group.id ?? group.path ?? group.label,
+      label: group.label ?? group.path ?? group.id,
+      path: group.path ?? group.id,
+      items: Array.isArray(group.items) ? group.items : [],
+      photos: Array.isArray(group.photos) ? group.photos : [],
+      videos: Array.isArray(group.videos) ? group.videos : []
+    }))
+    .filter((group) => group.id && group.items.length > 0);
+}
+
+function selectedGroup(groups, selectedId) {
+  if (!selectedId) {
+    return null;
+  }
+
+  return groups.find((group) => group.id === selectedId) ?? null;
 }

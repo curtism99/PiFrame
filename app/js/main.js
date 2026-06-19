@@ -13,7 +13,8 @@ import { configureCursorIdle } from "./cursorIdle.js";
 const stage = document.querySelector("#stage");
 const emptyState = document.querySelector("#empty-state");
 const widgetLayerElement = document.querySelector("#widget-layer");
-const CLIENT_BUILD = "widgets-weather-v1";
+const CLIENT_BUILD = "playlist-select-v4";
+const RUNTIME_POLL_MS = 1000;
 
 let config;
 let manifest;
@@ -64,7 +65,7 @@ function startDisplayMode(mode, options = {}) {
     targetModeName = normalizedMode;
   }
 
-  if (activeModeName === normalizedMode && normalizedMode !== "auto") {
+  if (!options.force && activeModeName === normalizedMode && normalizedMode !== "auto") {
     return;
   }
 
@@ -84,9 +85,9 @@ function startDisplayMode(mode, options = {}) {
   }
 
   if (normalizedMode === "ambience") {
-    activeMode = new AmbienceMode(stage, emptyState, config, manifest);
+    activeMode = new AmbienceMode(stage, emptyState, config, manifest, runtimeState);
   } else {
-    activeMode = new SlideshowMode(stage, emptyState, config, manifest, runtimeState?.slideshow_effects);
+    activeMode = new SlideshowMode(stage, emptyState, config, manifest, runtimeState);
   }
 
   activeMode.start();
@@ -108,9 +109,11 @@ function pollRuntimeState() {
 
     clockOverlay?.setEnabled(Boolean(state.clock_enabled));
     runtimeState = state;
-    activeMode?.setRuntimeOptions?.(state.slideshow_effects);
     if (state.effective_mode && state.effective_mode !== targetModeName) {
       startDisplayMode(state.effective_mode);
+      return;
     }
-  }, 5000);
+
+    activeMode?.setRuntimeOptions?.(state);
+  }, RUNTIME_POLL_MS);
 }

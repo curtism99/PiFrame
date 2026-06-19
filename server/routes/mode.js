@@ -1,4 +1,5 @@
 import { Router } from "express";
+import path from "node:path";
 
 const MODES = new Set(["slideshow", "ambience", "auto"]);
 const TRANSITION_STYLES = new Set(["random", "fade", "dissolve", "dip"]);
@@ -26,6 +27,16 @@ export function modeRouter({ config, runtimeState }) {
     response.json(await modePayload(config, runtimeState));
   });
 
+  router.post("/playlists", async (request, response) => {
+    const slideshowPlaylistId = normalizePlaylistId(request.body?.slideshow);
+    const ambiencePlaylistId = normalizePlaylistId(request.body?.ambience);
+    await runtimeState.write({
+      slideshow_playlist_id: slideshowPlaylistId,
+      ambience_playlist_id: ambiencePlaylistId
+    });
+    response.json(await modePayload(config, runtimeState));
+  });
+
   return router;
 }
 
@@ -44,6 +55,10 @@ export async function modePayload(config, runtimeState) {
     effective_mode: effectiveMode,
     auto_mode_enabled: Boolean(config.auto_mode?.enabled),
     clock_enabled: Boolean(state.clock_enabled),
+    selected_playlists: {
+      slideshow: normalizePlaylistId(state.slideshow_playlist_id),
+      ambience: normalizePlaylistId(state.ambience_playlist_id)
+    },
     slideshow_effects: {
       enabled: Boolean(state.slideshow_effects_enabled),
       style: TRANSITION_STYLES.has(transitionStyle) ? transitionStyle : "random"
@@ -51,4 +66,17 @@ export async function modePayload(config, runtimeState) {
     state_path: runtimeState.path,
     updated_at: state.updated_at
   };
+}
+
+function normalizePlaylistId(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = path.posix.normalize(value.trim().replace(/\\/g, "/")).replace(/\/+$/, "");
+  if (!normalized || normalized === "." || normalized === ".." || normalized.startsWith("../") || normalized.startsWith("/")) {
+    return null;
+  }
+
+  return normalized;
 }
