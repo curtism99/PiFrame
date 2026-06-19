@@ -136,8 +136,27 @@ features, but it is less forgiving than VLC or mpv for video containers.
 Preferred video format:
 
 ```text
-.mp4 with H.264 video, ideally 1080p
+.mp4 with H.264 video, yuv420p, ideally no larger than 1080p30
 ```
 
 `.webm` is supported by Chromium in many cases. `.mkv` is indexed as
 best-effort, but may not play reliably in kiosk mode.
+
+For Raspberry Pi kiosk output, treat 4K, 60fps, and very high bitrate files as
+suspect even when they play smoothly from another workstation browser. A useful
+ambience target is:
+
+```text
+H.264 MP4, max 1920x1080, max 30fps, yuv420p, CRF 23, maxrate 8000k
+```
+
+Use the optimizer script to audit or generate Pi-friendly copies while
+preserving directory grouping:
+
+```bash
+node scripts/optimize-ambience-videos.js --source /path/to/office/media/videos
+node scripts/optimize-ambience-videos.js --source /path/to/office/media/videos --dest /path/to/office-optimized/media/videos --apply
+```
+
+The first command is a dry-run report. The second writes optimized copies to a
+separate tree and does not overwrite source media.

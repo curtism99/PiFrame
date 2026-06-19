@@ -118,6 +118,20 @@ Supported video extensions:
 .mp4 .webm .mkv
 ```
 
+For ambience videos on the Pi kiosk display, prefer optimized MP4 files:
+
+```text
+H.264 video, yuv420p, max 1920x1080, max 30fps, modest bitrate
+```
+
+The optimizer script can audit a video folder or generate a parallel optimized
+tree while preserving folders such as `abstract` and `underwater`:
+
+```bash
+node scripts/optimize-ambience-videos.js --source /path/to/office/media/videos
+node scripts/optimize-ambience-videos.js --source /path/to/office/media/videos --dest /path/to/office-optimized/media/videos --apply
+```
+
 Portrait photos on a landscape display use smart-frame mode: a blurred
 full-screen background copy with a sharp centered foreground image.
 
