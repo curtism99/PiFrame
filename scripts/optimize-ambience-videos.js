@@ -20,36 +20,48 @@ async function main() {
     return;
   }
 
-  if (!options.source) {
-    console.error("Missing --source <dir>.");
+  if (!options.source && !options.manifestUrl) {
+    console.error("Missing --source <dir> or --manifest-url <url>.");
     printUsage();
     process.exit(1);
   }
 
-  const sourceRoot = path.resolve(options.source);
-  const destRoot = path.resolve(options.dest ?? `${sourceRoot}-optimized`);
+  const source = await loadSource(options);
+  const destRoot = path.resolve(options.dest ?? (options.source ? `${source.root}-optimized` : "optimized-ambience-videos"));
 
-  if (isInside(sourceRoot, destRoot)) {
+  if (options.dest && options.siblingSuffix) {
+    throw new Error("Use either --dest or --sibling-suffix, not both.");
+  }
+
+  if (options.manifestUrl && options.siblingSuffix) {
+    throw new Error("--sibling-suffix requires --source because it writes beside source directories.");
+  }
+
+  if (options.manifestUrl && options.apply && !options.dest) {
+    throw new Error("--dest is required with --manifest-url when using --apply.");
+  }
+
+  if (source.root && !options.siblingSuffix && isInside(source.root, destRoot)) {
     throw new Error("--dest must not be inside --source; generated files would be scanned again.");
   }
 
-  const files = await findVideos(sourceRoot);
-  if (files.length === 0) {
-    console.log(`No video files found under ${sourceRoot}`);
+  if (source.files.length === 0) {
+    console.log(`No video files found from ${source.label}`);
     return;
   }
 
   const results = [];
-  for (const file of files) {
-    const relativePath = path.relative(sourceRoot, file);
-    const outputPath = outputFor(destRoot, relativePath);
-    const probe = await probeVideo(file, options.ffprobe);
-    const decision = decide(file, probe, outputPath, options);
+  for (const item of source.files) {
+    const file = item.input;
+    const relativePath = item.relativePath;
+    const outputPath = outputFor(source.root, destRoot, relativePath, options);
+    const probe = await probeVideo(file, options.ffprobe, options.useProxy);
+    const decision = decide(relativePath, probe, outputPath, options);
 
-    results.push({ file, relativePath, outputPath, probe, decision, sourceRoot, destRoot });
+    results.push({ file, relativePath, outputPath, probe, decision });
   }
 
-  printReport(results, options, sourceRoot, destRoot);
+  printReport(results, options, source.label, destRoot);
 
   if (options.apply) {
     for (const result of results) {
@@ -75,6 +87,8 @@ function parseArgs(args) {
     crf: 23,
     preset: "medium",
     stripAudio: true,
+    useProxy: false,
+    siblingSuffix: null,
     ffmpeg: toolCommand(process.env.FFMPEG, "ffmpeg"),
     ffprobe: toolCommand(process.env.FFPROBE, "ffprobe")
   };
@@ -99,8 +113,14 @@ function parseArgs(args) {
       case "--source":
         parsed.source = next();
         break;
+      case "--manifest-url":
+        parsed.manifestUrl = next();
+        break;
       case "--dest":
         parsed.dest = next();
+        break;
+      case "--sibling-suffix":
+        parsed.siblingSuffix = next();
         break;
       case "--apply":
         parsed.apply = true;
@@ -130,8 +150,14 @@ function parseArgs(args) {
       case "--preset":
         parsed.preset = next();
         break;
+      case "--limit":
+        parsed.limit = positiveInteger(next(), arg);
+        break;
       case "--keep-audio":
         parsed.stripAudio = false;
+        break;
+      case "--use-proxy":
+        parsed.useProxy = true;
         break;
       case "--ffmpeg":
         parsed.ffmpeg = next();
@@ -143,7 +169,7 @@ function parseArgs(args) {
         if (arg.startsWith("-")) {
           throw new Error(`Unknown option ${arg}`);
         }
-        if (!parsed.source) {
+        if (!parsed.source && !parsed.manifestUrl) {
           parsed.source = arg;
         } else if (!parsed.dest) {
           parsed.dest = arg;
@@ -154,6 +180,85 @@ function parseArgs(args) {
   }
 
   return parsed;
+}
+
+async function loadSource(options) {
+  if (options.source && options.manifestUrl) {
+    throw new Error("Use either --source or --manifest-url, not both.");
+  }
+
+  if (options.manifestUrl) {
+    const manifestUrl = new URL(options.manifestUrl);
+    const response = await fetch(manifestUrl);
+    if (!response.ok) {
+      throw new Error(`Manifest request failed with HTTP ${response.status}: ${manifestUrl.href}`);
+    }
+    const manifest = await response.json();
+    const videos = manifestVideos(manifest, manifestUrl)
+      .sort((a, b) => a.relativePath.localeCompare(b.relativePath));
+    return {
+      root: null,
+      label: manifestUrl.href,
+      files: limitItems(videos, options.limit)
+    };
+  }
+
+  const sourceRoot = path.resolve(options.source);
+  const files = (await findVideos(sourceRoot, options)).map((file) => ({
+    input: file,
+    relativePath: path.relative(sourceRoot, file)
+  }));
+
+  return {
+    root: sourceRoot,
+    label: sourceRoot,
+    files: limitItems(files, options.limit)
+  };
+}
+
+function manifestVideos(manifest, manifestUrl) {
+  const groups = Array.isArray(manifest.ambience?.groups) ? manifest.ambience.groups : [];
+  const groupedVideos = groups.flatMap((group) => Array.isArray(group.videos) ? group.videos : []);
+  const flatVideos = Array.isArray(manifest.ambience?.videos) ? manifest.ambience.videos : [];
+  const byInput = new Map();
+
+  for (const item of [...groupedVideos, ...flatVideos]) {
+    if (!item?.url) {
+      continue;
+    }
+
+    const input = new URL(item.url, manifestUrl).href;
+    if (byInput.has(input)) {
+      continue;
+    }
+
+    byInput.set(input, {
+      input,
+      relativePath: manifestRelativePath(item)
+    });
+  }
+
+  return [...byInput.values()];
+}
+
+function manifestRelativePath(item) {
+  const rawPath = item.source_path || item.url || item.name;
+  let normalized = slashPath(decodeURIComponent(rawPath)).replace(/^\/+/, "");
+  if (normalized.startsWith("media/videos/")) {
+    normalized = normalized.slice("media/videos/".length);
+  } else if (normalized.startsWith("media/")) {
+    normalized = normalized.slice("media/".length);
+  }
+
+  return normalized || item.name || "video.mp4";
+}
+
+function limitItems(items, limit) {
+  if (!limit) {
+    return items;
+  }
+
+  return items.slice(0, limit);
 }
 
 function positiveInteger(value, name) {
@@ -189,7 +294,7 @@ function positiveNumber(value, name) {
   return number;
 }
 
-async function findVideos(root) {
+async function findVideos(root, options = {}) {
   const found = [];
 
   async function walk(current) {
@@ -206,6 +311,9 @@ async function findVideos(root) {
     for (const entry of entries) {
       const fullPath = path.join(current, entry.name);
       if (entry.isDirectory()) {
+        if (options.siblingSuffix && entry.name.endsWith(options.siblingSuffix)) {
+          continue;
+        }
         await walk(fullPath);
       } else if (entry.isFile() && videoExtensions.has(path.extname(entry.name).toLowerCase())) {
         found.push(fullPath);
@@ -217,7 +325,7 @@ async function findVideos(root) {
   return found.sort((a, b) => a.localeCompare(b));
 }
 
-async function probeVideo(file, ffprobe) {
+async function probeVideo(file, ffprobe, useProxy) {
   const output = await run(ffprobe, [
     "-v",
     "error",
@@ -230,7 +338,7 @@ async function probeVideo(file, ffprobe) {
     "-of",
     "json",
     file
-  ]);
+  ], { useProxy });
   const parsed = JSON.parse(output.stdout);
   const stream = parsed.streams?.[0] ?? {};
   const format = parsed.format ?? {};
@@ -247,10 +355,10 @@ async function probeVideo(file, ffprobe) {
   };
 }
 
-function decide(file, probe, outputPath, opts) {
+function decide(relativePath, probe, outputPath, opts) {
   const reasons = [];
-  if (path.extname(file).toLowerCase() !== ".mp4") {
-    reasons.push(`container ${path.extname(file).toLowerCase() || "unknown"}`);
+  if (path.extname(relativePath).toLowerCase() !== ".mp4") {
+    reasons.push(`container ${path.extname(relativePath).toLowerCase() || "unknown"}`);
   }
   if (probe.codec !== "h264") {
     reasons.push(`codec ${probe.codec}`);
@@ -330,21 +438,38 @@ async function writeOptimized(result, opts) {
   }
 
   args.push(result.outputPath);
-  await run(opts.ffmpeg, args, { inheritStderr: true });
+  await run(opts.ffmpeg, args, { inheritStderr: true, useProxy: opts.useProxy });
   console.log(`transcode ${result.relativePath}`);
 }
 
-function outputFor(destRoot, relativePath) {
+function outputFor(sourceRoot, destRoot, relativePath, opts) {
   const parsed = path.parse(relativePath);
+  if (opts.siblingSuffix) {
+    const parts = splitRelativePath(relativePath);
+    if (parts.length < 2) {
+      throw new Error("--sibling-suffix expects files inside category folders below --source.");
+    }
+    parts[0] = `${parts[0]}${opts.siblingSuffix}`;
+    const siblingPath = path.join(sourceRoot, ...parts);
+    const siblingParsed = path.parse(siblingPath);
+    return path.join(siblingParsed.dir, `${siblingParsed.name}.mp4`);
+  }
+
   return path.join(destRoot, parsed.dir, `${parsed.name}.mp4`);
 }
 
-function printReport(results, opts, sourceRoot, destRoot) {
+function splitRelativePath(relativePath) {
+  return slashPath(relativePath)
+    .split("/")
+    .filter(Boolean);
+}
+
+function printReport(results, opts, sourceLabel, destRoot) {
   const transcode = results.filter((item) => item.decision.action === "transcode");
   const copy = results.length - transcode.length;
 
-  console.log(`Source: ${sourceRoot}`);
-  console.log(`Destination: ${destRoot}`);
+  console.log(`Source: ${sourceLabel}`);
+  console.log(`Destination: ${destinationLabel(opts, sourceLabel, destRoot)}`);
   console.log(`Mode: ${opts.apply ? "apply" : "dry-run"}`);
   console.log(`Target: H.264 MP4, max ${opts.maxWidth}x${opts.maxHeight}, max ${opts.maxFps}fps, yuv420p, CRF ${opts.crf}, maxrate ${opts.maxBitrate}`);
   console.log(`Videos: ${results.length}; transcode: ${transcode.length}; copy: ${copy}`);
@@ -366,6 +491,14 @@ function printReport(results, opts, sourceRoot, destRoot) {
   }
 }
 
+function destinationLabel(opts, sourceLabel, destRoot) {
+  if (opts.siblingSuffix) {
+    return `${sourceLabel}${path.sep}<playlist>${opts.siblingSuffix}`;
+  }
+
+  return destRoot;
+}
+
 function parseFps(rate) {
   if (!rate || rate === "0/0") {
     return 0;
@@ -375,6 +508,10 @@ function parseFps(rate) {
     return 0;
   }
   return Number((numerator / denominator).toFixed(3));
+}
+
+function slashPath(value) {
+  return String(value).replace(/\\/g, "/");
 }
 
 function bitrateToMbps(value) {
@@ -420,7 +557,10 @@ function isInside(parent, child) {
 
 function run(command, args, options = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: ["ignore", "pipe", options.inheritStderr ? "inherit" : "pipe"] });
+    const child = spawn(command, args, {
+      env: childEnv(options.useProxy),
+      stdio: ["ignore", "pipe", options.inheritStderr ? "inherit" : "pipe"]
+    });
     let stdout = "";
     let stderr = "";
 
@@ -443,18 +583,35 @@ function run(command, args, options = {}) {
   });
 }
 
+function childEnv(useProxy) {
+  const env = { ...process.env };
+  if (useProxy) {
+    return env;
+  }
+
+  for (const key of ["http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "all_proxy"]) {
+    delete env[key];
+  }
+  env.NO_PROXY = env.no_proxy = [env.NO_PROXY, env.no_proxy, "localhost", "127.0.0.1", "::1", "192.168.0.0/16", "10.0.0.0/8"].filter(Boolean).join(",");
+  return env;
+}
+
 function printUsage() {
   console.log(`Usage:
   node scripts/optimize-ambience-videos.js --source <videos-dir> [--dest <output-dir>] [--apply]
+  node scripts/optimize-ambience-videos.js --source <videos-dir> --sibling-suffix " [optimized]" [--apply]
+  node scripts/optimize-ambience-videos.js --manifest-url <url> --dest <output-dir> [--apply]
 
 Defaults:
   dry-run report only
-  destination: <source>-optimized
+  destination: <source>-optimized for --source, optimized-ambience-videos for --manifest-url dry-runs
   target: H.264 MP4, max 1920x1080, max 30fps, yuv420p, CRF 23, maxrate 8000k
 
 Options:
   --source <dir>       Source videos root, for example media/videos
+  --manifest-url <url> PiFrame /api/manifest URL; reads ambience videos over HTTP
   --dest <dir>         Output videos root; must not be inside source
+  --sibling-suffix <s> Write beside first-level source folders, e.g. abstract [optimized]
   --apply              Write output files; omitted means dry-run only
   --force              Overwrite existing output files
   --max-width <n>      Default 1920
@@ -464,7 +621,9 @@ Options:
   --maxrate <rate>     Default 8000k
   --bufsize <rate>     Default 16000k
   --preset <name>      Default medium
+  --limit <n>          Process only the first n videos, useful for smoke tests
   --keep-audio         Keep audio as AAC 128k; default strips audio
+  --use-proxy          Let ffmpeg/ffprobe inherit proxy environment variables
   --ffmpeg <path>      Default ffmpeg
   --ffprobe <path>     Default ffprobe`);
 }
