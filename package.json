@@ -1,7 +1,7 @@
 {
   "name": "pi-picture-kiosk",
   "version": "0.1.0",
-  "description": "Local-first Raspberry Pi picture frame and ambience kiosk.",
+  "description": "Local-first Raspberry Pi still-photo and ambient display.",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,7 +9,7 @@
     "start": "node server/server.js",
     "scan": "node scripts/scan-media.js",
     "check-media": "node scripts/check-media.js",
-    "optimize-ambience": "node scripts/optimize-ambience-videos.js"
+    "test": "node --test"
   },
   "dependencies": {
     "express": "^4.19.2"

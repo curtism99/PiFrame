@@ -13,7 +13,6 @@ const elements = {
   effectsToggle: document.querySelector("#effects-toggle"),
   effectsStyle: document.querySelector("#effects-style"),
   slideshowPlaylist: document.querySelector("#slideshow-playlist"),
-  ambiencePlaylist: document.querySelector("#ambience-playlist"),
   modeButtons: [...document.querySelectorAll("[data-mode]")]
 };
 
@@ -49,7 +48,6 @@ elements.weatherTestAlertsToggle.addEventListener("change", async () => {
 elements.effectsToggle.addEventListener("change", updateEffects);
 elements.effectsStyle.addEventListener("change", updateEffects);
 elements.slideshowPlaylist.addEventListener("change", updatePlaylists);
-elements.ambiencePlaylist.addEventListener("change", updatePlaylists);
 elements.modeButtons.forEach((button) => {
   button.addEventListener("click", async () => {
     await fetch("/api/mode", {
@@ -98,13 +96,6 @@ function render({ health, config, manifest, mode, weather }) {
     "All slideshow playlists",
     "items"
   );
-  renderPlaylistSelect(
-    elements.ambiencePlaylist,
-    manifest.ambience?.groups,
-    mode.selected_playlists?.ambience,
-    "All ambience playlists",
-    "videos"
-  );
   elements.modeButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.mode === mode.effective_mode);
   });
@@ -113,13 +104,14 @@ function render({ health, config, manifest, mode, weather }) {
     "Backend health": health.ok ? "ok" : "not ok",
     "Current mode": mode.effective_mode,
     "Configured mode": mode.configured_mode,
-    "Auto enabled": yesNo(mode.auto_mode_enabled),
+    "Legacy mode fallback": mode.legacy_mode_fallback
+      ? `${mode.legacy_mode_fallback.requested} -> ${mode.legacy_mode_fallback.fallback}`
+      : "none",
     "Clock": yesNo(mode.clock_enabled),
     "Weather": yesNo(weather.enabled),
     "Weather test alerts": yesNo(weather.test_alerts_enabled),
     "Slideshow transitions": `${yesNo(mode.slideshow_effects?.enabled)} (${mode.slideshow_effects?.style ?? "random"})`,
     "Slideshow playlist": playlistStatus(manifest.slideshow?.groups, mode.selected_playlists?.slideshow),
-    "Ambience playlist": playlistStatus(manifest.ambience?.groups, mode.selected_playlists?.ambience),
     "Media root": config.media.root,
     "NAS source": config.nas_sync?.source ?? "not configured",
     "Last sync": config.runtime?.last_sync ?? "unknown",
@@ -128,13 +120,9 @@ function render({ health, config, manifest, mode, weather }) {
 
   setDefinitionList(elements.mediaList, {
     "Photos": manifest.counts?.photos ?? 0,
-    "Videos": manifest.counts?.videos ?? 0,
     "Slideshow items": manifest.counts?.slideshow_items ?? 0,
     "Slideshow playlists": manifest.counts?.slideshow_groups ?? 0,
-    "Ambience videos": manifest.counts?.ambience_videos ?? 0,
-    "Ambience playlists": manifest.counts?.ambience_groups ?? 0,
     "Slideshow roots": (manifest.playlists?.slideshow ?? []).join(", ") || "none",
-    "Ambience roots": (manifest.playlists?.ambience ?? []).join(", ") || "none",
     "Manifest": manifest.generated_at,
     "Local cache": manifest.media_root,
     "Static media root": manifest.media_asset_root ?? config.media.root
@@ -208,8 +196,7 @@ async function updatePlaylists() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      slideshow: elements.slideshowPlaylist.value || null,
-      ambience: elements.ambiencePlaylist.value || null
+      slideshow: elements.slideshowPlaylist.value || null
     })
   });
   await refresh();
@@ -245,11 +232,10 @@ function normalizeGroups(groups = [], preferredCountField) {
     .map((group) => {
       const countItems = Array.isArray(group[preferredCountField]) ? group[preferredCountField] : [];
       const fallbackItems = Array.isArray(group.items) ? group.items : [];
-      const fallbackVideos = Array.isArray(group.videos) ? group.videos : [];
       return {
         id: group.id ?? group.path ?? group.label,
         label: group.label ?? group.path ?? group.id,
-        count: countItems.length || fallbackItems.length || fallbackVideos.length
+        count: countItems.length || fallbackItems.length
       };
     })
     .filter((group) => group.id);

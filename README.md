@@ -1,6 +1,6 @@
 # Pi Picture Kiosk
 
-Local-first Raspberry Pi picture frame and ambience kiosk software.
+Local-first Raspberry Pi still-photo frame and ambient display software.
 
 This project runs a tiny website on the Pi, opens Chromium in kiosk mode at
 `http://localhost:8080`, and displays media that has already been copied from a
@@ -58,14 +58,8 @@ sample-media/
       family/
       travel/
       art/
-    videos/
-      fireplace/
-      clouds/
-      abstract/
-      short-clips/
   playlists/
     slideshow.json
-    ambience.json
 ```
 
 Playlist folder entries are scanned recursively, so `media/photos` includes all
@@ -117,20 +111,14 @@ the public internet.
 
 ## Media Compatibility
 
-Images:
-
 ```text
 .jpg .jpeg .png .webp
 ```
 
-Videos:
-
-```text
-.mp4 .webm .mkv
-```
-
-MP4 with H.264 video is preferred for Chromium kiosk mode. MKV files are indexed
-as best-effort and may not play reliably in Chromium.
+The primary manifest and kiosk runtime index still images only. Video and movie
+playback are retired because they were not reliable on the Raspberry Pi display.
+Existing configs that request `ambience` or `auto` mode fall back to `slideshow`;
+legacy video roots and extensions are ignored with a warning in admin.
 
 ## Widgets
 

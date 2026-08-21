@@ -1,7 +1,13 @@
 import { Router } from "express";
 import path from "node:path";
+import {
+  LEGACY_DISPLAY_MODES,
+  PRIMARY_DISPLAY_MODE,
+  legacyModeFallback,
+  normalizeDisplayMode
+} from "../compatibility.js";
 
-const MODES = new Set(["slideshow", "ambience", "auto"]);
+const ACCEPTED_MODES = new Set([PRIMARY_DISPLAY_MODE, ...LEGACY_DISPLAY_MODES]);
 const TRANSITION_STYLES = new Set(["random", "fade", "dissolve", "dip"]);
 
 export function modeRouter({ config, runtimeState }) {
@@ -13,8 +19,12 @@ export function modeRouter({ config, runtimeState }) {
 
   router.post("/", async (request, response) => {
     const mode = request.body?.mode;
-    if (!MODES.has(mode)) {
-      response.status(400).json({ error: "invalid_mode", allowed: [...MODES] });
+    if (!ACCEPTED_MODES.has(mode)) {
+      response.status(400).json({
+        error: "invalid_mode",
+        allowed: [PRIMARY_DISPLAY_MODE],
+        legacy_fallbacks: [...LEGACY_DISPLAY_MODES]
+      });
       return;
     }
 
@@ -29,10 +39,8 @@ export function modeRouter({ config, runtimeState }) {
 
   router.post("/playlists", async (request, response) => {
     const slideshowPlaylistId = normalizePlaylistId(request.body?.slideshow);
-    const ambiencePlaylistId = normalizePlaylistId(request.body?.ambience);
     await runtimeState.write({
-      slideshow_playlist_id: slideshowPlaylistId,
-      ambience_playlist_id: ambiencePlaylistId
+      slideshow_playlist_id: slideshowPlaylistId
     });
     response.json(await modePayload(config, runtimeState));
   });
@@ -42,8 +50,12 @@ export function modeRouter({ config, runtimeState }) {
 
 export async function modePayload(config, runtimeState) {
   const state = await runtimeState.read();
-  const configuredMode = config.display?.mode ?? "slideshow";
-  const effectiveMode = state.current_mode ?? configuredMode;
+  const requestedConfiguredMode = config.display?.mode ?? PRIMARY_DISPLAY_MODE;
+  const requestedRuntimeMode = state.current_mode;
+  const requestedEffectiveMode = requestedRuntimeMode ?? requestedConfiguredMode;
+  const configuredMode = normalizeDisplayMode(requestedConfiguredMode);
+  const runtimeMode = requestedRuntimeMode ? normalizeDisplayMode(requestedRuntimeMode) : null;
+  const effectiveMode = normalizeDisplayMode(requestedEffectiveMode);
   const configuredTransitionStyle = config.slideshow?.transition_effects?.style ?? "random";
   const transitionStyle = TRANSITION_STYLES.has(state.slideshow_effect_style)
     ? state.slideshow_effect_style
@@ -51,13 +63,15 @@ export async function modePayload(config, runtimeState) {
 
   return {
     configured_mode: configuredMode,
-    runtime_mode: state.current_mode,
+    requested_configured_mode: requestedConfiguredMode,
+    runtime_mode: runtimeMode,
+    requested_runtime_mode: requestedRuntimeMode,
     effective_mode: effectiveMode,
-    auto_mode_enabled: Boolean(config.auto_mode?.enabled),
+    legacy_mode_fallback: legacyModeFallback(requestedEffectiveMode),
+    auto_mode_enabled: false,
     clock_enabled: Boolean(state.clock_enabled),
     selected_playlists: {
-      slideshow: normalizePlaylistId(state.slideshow_playlist_id),
-      ambience: normalizePlaylistId(state.ambience_playlist_id)
+      slideshow: normalizePlaylistId(state.slideshow_playlist_id)
     },
     slideshow_effects: {
       enabled: Boolean(state.slideshow_effects_enabled),

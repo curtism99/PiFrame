@@ -22,7 +22,7 @@ export function healthRouter({ config, configPath, runtimeState, manifestStore }
       manifest_generated_at: manifest?.generated_at ?? null,
       last_manifest_error: manifestStore.getLastError()?.message ?? null,
       admin_auth: "disabled-lan-only",
-      app_build: "playlist-select-v4"
+      app_build: "still-photo-primary-v1"
     });
   });
 

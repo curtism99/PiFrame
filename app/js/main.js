@@ -1,8 +1,6 @@
 import { fetchConfig } from "./configClient.js";
 import { fetchManifest } from "./manifestClient.js";
 import { SlideshowMode } from "./slideshowMode.js";
-import { AmbienceMode } from "./ambienceMode.js";
-import { AutoMode } from "./autoMode.js";
 import { ClockOverlay } from "./clockOverlay.js";
 import { fetchRuntimeMode } from "./adminClient.js";
 import { setTransitionSeconds } from "./transitions.js";
@@ -13,15 +11,12 @@ import { configureCursorIdle } from "./cursorIdle.js";
 const stage = document.querySelector("#stage");
 const emptyState = document.querySelector("#empty-state");
 const widgetLayerElement = document.querySelector("#widget-layer");
-const CLIENT_BUILD = "playlist-select-v4";
+const CLIENT_BUILD = "still-photo-primary-v1";
 const RUNTIME_POLL_MS = 1000;
 
 let config;
 let manifest;
-let activeModeName = null;
-let targetModeName = null;
 let activeMode = null;
-let autoMode = null;
 let widgetLayer = null;
 let clockOverlay = null;
 let weatherWidget = null;
@@ -50,8 +45,7 @@ try {
   }
 
   runtimeState = await fetchRuntimeMode().catch(() => null);
-  const initialMode = runtimeState?.effective_mode ?? config.display?.mode ?? "slideshow";
-  startDisplayMode(initialMode);
+  startSlideshow();
   pollRuntimeState();
 } catch (error) {
   emptyState.hidden = false;
@@ -59,45 +53,11 @@ try {
   emptyState.querySelector("p").textContent = error.message;
 }
 
-function startDisplayMode(mode, options = {}) {
-  const normalizedMode = normalizeMode(mode);
-  if (!options.fromAuto) {
-    targetModeName = normalizedMode;
-  }
-
-  if (!options.force && activeModeName === normalizedMode && normalizedMode !== "auto") {
-    return;
-  }
-
-  autoMode?.stop();
+function startSlideshow() {
   activeMode?.stop();
   stage.replaceChildren();
-  activeModeName = normalizedMode;
-
-  if (normalizedMode === "auto") {
-    if (!config.auto_mode?.enabled) {
-      startDisplayMode("slideshow");
-      return;
-    }
-    autoMode = new AutoMode(config, (chosenMode) => startDisplayMode(chosenMode, { fromAuto: true }));
-    autoMode.start();
-    return;
-  }
-
-  if (normalizedMode === "ambience") {
-    activeMode = new AmbienceMode(stage, emptyState, config, manifest, runtimeState);
-  } else {
-    activeMode = new SlideshowMode(stage, emptyState, config, manifest, runtimeState);
-  }
-
+  activeMode = new SlideshowMode(stage, emptyState, config, manifest, runtimeState);
   activeMode.start();
-}
-
-function normalizeMode(mode) {
-  if (mode === "ambience" || mode === "auto") {
-    return mode;
-  }
-  return "slideshow";
 }
 
 function pollRuntimeState() {
@@ -109,11 +69,6 @@ function pollRuntimeState() {
 
     clockOverlay?.setEnabled(Boolean(state.clock_enabled));
     runtimeState = state;
-    if (state.effective_mode && state.effective_mode !== targetModeName) {
-      startDisplayMode(state.effective_mode);
-      return;
-    }
-
     activeMode?.setRuntimeOptions?.(state);
   }, RUNTIME_POLL_MS);
 }

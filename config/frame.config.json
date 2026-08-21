@@ -9,15 +9,12 @@
     "root": "sample-media",
     "asset_base_dir": "media",
     "fallback_dirs": {
-      "slideshow": ["media/photos"],
-      "ambience": ["media/videos"]
+      "slideshow": ["media/photos"]
     },
-    "allowed_image_extensions": [".jpg", ".jpeg", ".png", ".webp"],
-    "allowed_video_extensions": [".mp4", ".webm", ".mkv"]
+    "allowed_image_extensions": [".jpg", ".jpeg", ".png", ".webp"]
   },
   "playlists": {
-    "slideshow": "playlists/slideshow.json",
-    "ambience": "playlists/ambience.json"
+    "slideshow": "playlists/slideshow.json"
   },
   "display": {
     "orientation": "landscape",
@@ -34,20 +31,6 @@
       "enabled": true,
       "style": "random",
       "effects": ["fade", "dissolve", "dip"]
-    }
-  },
-  "ambience": {
-    "video_duration_minutes": 30,
-    "shuffle": true,
-    "muted": true
-  },
-  "auto_mode": {
-    "enabled": false,
-    "strategy": "weighted-random",
-    "switch_mode_every_minutes": 30,
-    "weights": {
-      "slideshow": 70,
-      "ambience": 30
     }
   },
   "clock": {

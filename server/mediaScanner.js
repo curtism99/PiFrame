@@ -1,5 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { legacyConfigWarnings } from "./compatibility.js";
+
+const DEFAULT_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 
 export async function scanMedia(config, projectRoot) {
   const mediaRoot = path.isAbsolute(config.media.root)
@@ -7,29 +10,25 @@ export async function scanMedia(config, projectRoot) {
     : path.resolve(projectRoot, config.media.root);
   const mediaAssetRoot = getMediaAssetRoot(config, mediaRoot);
 
-  const imageExtensions = new Set(config.media.allowed_image_extensions.map((item) => item.toLowerCase()));
-  const videoExtensions = new Set(config.media.allowed_video_extensions.map((item) => item.toLowerCase()));
-  const allMediaExtensions = new Set([...imageExtensions, ...videoExtensions]);
+  const imageExtensions = new Set(
+    (config.media?.allowed_image_extensions ?? DEFAULT_IMAGE_EXTENSIONS)
+      .map((item) => item.toLowerCase())
+  );
 
   const slideshowDirs = await resolvePlaylistDirs(config, mediaRoot, "slideshow");
-  const ambienceDirs = await resolvePlaylistDirs(config, mediaRoot, "ambience");
-  const slideshowGroups = await scanMediaGroups(mediaRoot, mediaAssetRoot, slideshowDirs, allMediaExtensions, "slideshow", imageExtensions);
+  const slideshowGroups = await scanMediaGroups(
+    mediaRoot,
+    mediaAssetRoot,
+    slideshowDirs,
+    imageExtensions,
+    "slideshow"
+  );
   const slideshowItems = uniqueMediaItems(slideshowGroups.flatMap((group) => group.items))
     .sort((a, b) => a.url.localeCompare(b.url));
-  const ambienceGroups = await scanMediaGroups(mediaRoot, mediaAssetRoot, ambienceDirs, videoExtensions, "ambience", imageExtensions);
-  const ambienceVideos = uniqueMediaItems(ambienceGroups.flatMap((group) => group.videos))
-    .sort((a, b) => a.url.localeCompare(b.url));
-  const slideshowPhotos = slideshowItems.filter((item) => item.type === "image");
-  const slideshowVideos = slideshowItems.filter((item) => item.type === "video");
-  const warnings = [];
-  const allVideos = [...slideshowVideos, ...ambienceVideos];
-
-  if (allVideos.some((item) => item.extension === ".mkv")) {
-    warnings.push({
-      level: "warning",
-      message: "MKV files are indexed but may not play reliably in Chromium kiosk mode."
-    });
-  }
+  const warnings = legacyConfigWarnings(config).map((message) => ({
+    level: "warning",
+    message
+  }));
 
   return {
     generated_at: new Date().toISOString(),
@@ -38,26 +37,17 @@ export async function scanMedia(config, projectRoot) {
     media_root: mediaRoot,
     media_asset_root: mediaAssetRoot,
     playlists: {
-      slideshow: slideshowDirs,
-      ambience: ambienceDirs
+      slideshow: slideshowDirs
     },
     slideshow: {
       items: slideshowItems,
-      photos: slideshowPhotos,
-      videos: slideshowVideos,
+      photos: slideshowItems,
       groups: slideshowGroups
     },
-    ambience: {
-      videos: ambienceVideos,
-      groups: ambienceGroups
-    },
     counts: {
-      photos: slideshowPhotos.length,
-      videos: allVideos.length,
+      photos: slideshowItems.length,
       slideshow_items: slideshowItems.length,
-      slideshow_groups: slideshowGroups.length,
-      ambience_videos: ambienceVideos.length,
-      ambience_groups: ambienceGroups.length
+      slideshow_groups: slideshowGroups.length
     },
     warnings
   };
@@ -93,17 +83,16 @@ async function resolvePlaylistDirs(config, mediaRoot, mode) {
 }
 
 function legacyFallbackDirs(config, mode) {
-  if (mode === "slideshow") {
-    return config.media?.slideshow_dirs ?? ["media/photos"];
-  }
-  return config.media?.ambience_dirs ?? ["media/videos"];
+  return mode === "slideshow"
+    ? config.media?.slideshow_dirs ?? ["media/photos"]
+    : [];
 }
 
 function uniqueRelativeDirs(entries) {
   return [...new Set(entries.map(normalizeRelativeDir).filter(Boolean))];
 }
 
-async function scanMediaGroups(mediaRoot, mediaAssetRoot, relativeDirs, extensions, category, imageExtensions) {
+async function scanMediaGroups(mediaRoot, mediaAssetRoot, relativeDirs, extensions, category) {
   const groups = new Map();
 
   for (const relativeDir of relativeDirs ?? []) {
@@ -112,7 +101,7 @@ async function scanMediaGroups(mediaRoot, mediaAssetRoot, relativeDirs, extensio
       continue;
     }
 
-    const items = await walkMedia(mediaRoot, mediaAssetRoot, absoluteDir, extensions, category, imageExtensions);
+    const items = await walkMedia(mediaRoot, mediaAssetRoot, absoluteDir, extensions, category);
     for (const item of items) {
       const groupPath = playlistGroupPath(relativeDir, item.source_path);
       if (!groups.has(groupPath)) {
@@ -121,8 +110,7 @@ async function scanMediaGroups(mediaRoot, mediaAssetRoot, relativeDirs, extensio
           label: labelFromPath(groupPath),
           path: groupPath,
           items: [],
-          photos: [],
-          videos: []
+          photos: []
         });
       }
 
@@ -136,15 +124,14 @@ async function scanMediaGroups(mediaRoot, mediaAssetRoot, relativeDirs, extensio
       return {
         ...group,
         items,
-        photos: items.filter((item) => item.type === "image"),
-        videos: items.filter((item) => item.type === "video")
+        photos: items
       };
     })
     .filter((group) => group.items.length > 0)
     .sort((a, b) => a.path.localeCompare(b.path));
 }
 
-async function walkMedia(mediaRoot, mediaAssetRoot, currentDir, extensions, category, imageExtensions) {
+async function walkMedia(mediaRoot, mediaAssetRoot, currentDir, extensions, category) {
   let entries = [];
   try {
     entries = await fs.readdir(currentDir, { withFileTypes: true });
@@ -156,7 +143,7 @@ async function walkMedia(mediaRoot, mediaAssetRoot, currentDir, extensions, cate
   for (const entry of entries) {
     const absolutePath = path.join(currentDir, entry.name);
     if (entry.isDirectory()) {
-      results.push(...(await walkMedia(mediaRoot, mediaAssetRoot, absolutePath, extensions, category, imageExtensions)));
+      results.push(...(await walkMedia(mediaRoot, mediaAssetRoot, absolutePath, extensions, category)));
       continue;
     }
 
@@ -172,10 +159,9 @@ async function walkMedia(mediaRoot, mediaAssetRoot, currentDir, extensions, cate
     const stats = await fs.stat(absolutePath);
     const relativePath = mediaUrlPath(mediaRoot, mediaAssetRoot, absolutePath);
     const sourcePath = slashPath(path.relative(mediaRoot, absolutePath));
-    const type = imageExtensions.has(extension) ? "image" : "video";
     const media = {
       url: `/media/${relativePath.split("/").map(encodeURIComponent).join("/")}`,
-      type,
+      type: "image",
       name: entry.name,
       extension,
       category,
@@ -184,10 +170,6 @@ async function walkMedia(mediaRoot, mediaAssetRoot, currentDir, extensions, cate
       mtime: stats.mtime.toISOString(),
       size_bytes: stats.size
     };
-
-    if (type === "video") {
-      media.browser_playback = extension === ".mp4" ? "preferred" : extension === ".mkv" ? "best-effort" : "supported";
-    }
 
     results.push(media);
   }

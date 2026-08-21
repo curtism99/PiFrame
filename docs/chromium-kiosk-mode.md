@@ -128,65 +128,17 @@ The kiosk does not need browser-saved passwords because it only opens the local
 app at `http://localhost:8080`. This does not change the NAS SMB credential
 file, which remains root-owned at `/etc/pi-picture-kiosk/smb-credentials`.
 
-## Video Implications
+## Still-Photo Runtime
 
-Chromium is convenient for layout, admin controls, clock overlays, and future UI
-features, but it is less forgiving than VLC or mpv for video containers.
+PiFrame uses Chromium for still-photo presentation, admin controls, and widget
+overlays. Video and movie playback are retired from the primary runtime because
+real-device playback was not reliable enough on the Raspberry Pi.
 
-Preferred video format:
+The kiosk now indexes and renders images only. Legacy `ambience` and `auto` mode
+values fall back to `slideshow`, and legacy video settings produce an admin
+warning instead of starting a decoder path. Existing video files can remain in
+the synced NAS tree during migration; they are ignored by manifest generation.
 
-```text
-.mp4 with H.264 video, yuv420p, ideally no larger than 1080p30
-```
-
-`.webm` is supported by Chromium in many cases. `.mkv` is indexed as
-best-effort, but may not play reliably in kiosk mode.
-
-For Raspberry Pi kiosk output, treat 4K, 60fps, and very high bitrate files as
-suspect even when they play smoothly from another workstation browser. A useful
-ambience target is:
-
-```text
-H.264 MP4, max 1920x1080, max 30fps, yuv420p, CRF 23, maxrate 8000k
-```
-
-Use the optimizer script from the workstation against the NAS media tree so the
-workstation does the CPU-heavy transcode work. The preferred workflow writes
-optimized folders beside the originals:
-
-```bash
-node scripts/optimize-ambience-videos.js --source /path/to/office/media/videos --sibling-suffix " [optimized]"
-node scripts/optimize-ambience-videos.js --source /path/to/office/media/videos --sibling-suffix " [optimized]" --apply
-```
-
-The first command is a dry-run report. The second writes optimized sibling
-folders such as:
-
-```text
-office/media/videos/abstract [optimized]
-office/media/videos/underwater [optimized]
-```
-
-Because these folders are still under `office/media/videos`, PiFrame discovers
-them during the normal NAS sync and manifest refresh. No manifest editing is
-needed, and no playlist JSON change is needed for the default media layout.
-
-If you prefer a fully separate output tree, use `--dest` instead of
-`--sibling-suffix`:
-
-```bash
-node scripts/optimize-ambience-videos.js --source /path/to/office/media/videos --dest /path/to/office-optimized/media/videos --apply
-```
-
-If the NAS share is not mounted on the workstation, the script can use the
-deployed PiFrame manifest for audit/smoke-test work and stream source videos
-over HTTP. This is a fallback path, not the preferred full-library transcode
-path:
-
-```bash
-node scripts/optimize-ambience-videos.js --manifest-url http://192.168.0.70:8080/api/manifest --dest ./optimized-videos
-```
-
-After sync and manifest refresh, admin will show playlist groups such as
-`abstract [optimized]` and `underwater [optimized]`; select one of those groups
-instead of `All` to test the Pi-friendly files.
+Physical-Pi validation should focus on photo transitions, long-running Chromium
+stability, and recovery after sync or browser restarts. Still ambience scenes
+with Pi-friendly image motion are tracked separately from this retirement work.

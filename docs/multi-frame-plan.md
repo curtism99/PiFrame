@@ -19,15 +19,12 @@ NAS layout:
 PiFrame-Media/
   office/
     media/photos/
-    media/videos/
     playlists/
   living-room/
     media/photos/
-    media/videos/
     playlists/
   hallway/
     media/photos/
-    media/videos/
     playlists/
 ```
 

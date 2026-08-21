@@ -9,14 +9,8 @@ sample-media/
       family/
       travel/
       art/
-    videos/
-      fireplace/
-      clouds/
-      abstract/
-      short-clips/
   playlists/
     slideshow.json
-    ambience.json
 ```
 
 Pi cache media goes under:
@@ -28,74 +22,31 @@ Pi cache media goes under:
       family/
       travel/
       art/
-    videos/
-      fireplace/
-      clouds/
-      abstract/
-      short-clips/
   playlists/
     slideshow.json
-    ambience.json
 ```
 
-The PiFrame config defines the default discovery roots, usually `media/photos`
-for slideshow and `media/videos` for ambience. Those roots are always scanned.
-Adding a new folder such as `media/videos/underwater` under the NAS media tree is
-enough for PiFrame to discover it after sync and manifest refresh.
+The PiFrame config defines `media/photos` as its default discovery root. Adding
+a folder such as `media/photos/travel` under the NAS media tree is enough for
+PiFrame to discover it after sync and manifest refresh.
 
-Synced playlist files are optional extra roots for unusual or cross-mode media,
-not the normal place to choose the active playlist. For example, a slideshow
-playlist file can add a video folder to slideshow rotation:
-
-```json
-{
-  "slideshow": [
-    "media/videos/short-clips"
-  ]
-}
-```
-
-or add a few specific folders outside the default discovery roots:
+Synced playlist files are optional extra image roots, not the normal place to
+choose the active album. For example:
 
 ```json
 {
   "slideshow": [
     "media/photos/family",
-    "media/photos/travel",
-    "media/videos/short-clips"
+    "media/photos/travel"
   ]
 }
 ```
 
-Discovered directories become playback groups. Since `media/photos` and
-`media/videos` are default discovery roots, each immediate child folder becomes
-a separate group, such as photo albums for slideshow or ambience folders like
-`abstract`, `clouds`, or `underwater`.
-
-```json
-{
-  "ambience": [
-    "media/videos"
-  ]
-}
-```
-
-You can also list ambience folders directly. They are added to the default
-`media/videos` scan rather than replacing it:
-
-```json
-{
-  "ambience": [
-    "media/videos/abstract",
-    "media/videos/underwater"
-  ]
-}
-```
-
-The admin page exposes these discovered groups as runtime playlist selectors for
-slideshow and ambience mode. Choosing `All` keeps the old flattened behavior;
-choosing a specific group limits that mode to the selected directory until it is
-changed again or the runtime state is reset. This selection is stored on the Pi,
+Discovered directories become slideshow groups. Each immediate child folder
+under `media/photos` becomes a separate album. The admin page exposes these
+groups as the runtime slideshow selector. Choosing `All` uses every discovered
+photo; choosing a group limits display to that directory until the selection is
+changed or runtime state is reset. The active selection is stored on the Pi,
 not in NAS playlist JSON.
 
 The local cache root contains both `media/` and `playlists/`. The Express static
@@ -112,39 +63,23 @@ Supported image extensions:
 .jpg .jpeg .png .webp
 ```
 
-Supported video extensions:
+## Legacy Video and Ambience Config
 
-```text
-.mp4 .webm .mkv
-```
+Video and movie playback are no longer part of the primary PiFrame experience.
+The scanner ignores video extensions and legacy ambience roots, so
+`media/videos` is not required and video files cannot enter slideshow playback.
 
-For ambience videos on the Pi kiosk display, prefer optimized MP4 files:
+Old configs remain safe:
 
-```text
-H.264 video, yuv420p, max 1920x1080, max 30fps, modest bitrate
-```
+- `display.mode` values of `ambience` or `auto` resolve to `slideshow`.
+- old runtime mode values resolve to `slideshow`.
+- `allowed_video_extensions`, ambience roots, ambience playlists, and ambience
+  settings are ignored and reported as warnings.
+- old manifests that contain video items are filtered by the slideshow client.
 
-The optimizer script should normally run from the workstation against the NAS
-media tree so the workstation does the CPU-heavy transcode work. The preferred
-workflow writes optimized sibling folders:
-
-```bash
-node scripts/optimize-ambience-videos.js --source /path/to/office/media/videos --sibling-suffix " [optimized]"
-node scripts/optimize-ambience-videos.js --source /path/to/office/media/videos --sibling-suffix " [optimized]" --apply
-```
-
-This creates folders like `abstract [optimized]` and `underwater [optimized]`
-beside the original `abstract` and `underwater` folders. Since those folders are
-still under `office/media/videos`, the normal Pi sync and manifest refresh will
-auto-discover them. No manifest edits are required.
-
-It can also use a deployed PiFrame manifest for audit/smoke-test work when
-SMB/NAS access is not available locally. This streams media through the Pi and
-is not the preferred full-library transcode path:
-
-```bash
-node scripts/optimize-ambience-videos.js --manifest-url http://192.168.0.70:8080/api/manifest --dest ./optimized-videos
-```
+The historical `scripts/optimize-ambience-videos.js` utility remains in the
+repository for reference, but its outputs are not indexed by the primary
+manifest and it is not exposed as a normal npm workflow.
 
 Portrait photos on a landscape display use smart-frame mode: a blurred
 full-screen background copy with a sharp centered foreground image.

@@ -26,8 +26,6 @@
           <h2>Controls</h2>
           <div class="segmented" role="group" aria-label="Display mode">
             <button data-mode="slideshow" type="button">Slideshow</button>
-            <button data-mode="ambience" type="button">Ambience</button>
-            <button data-mode="auto" type="button">Auto</button>
           </div>
           <label class="toggle">
             <input id="clock-toggle" type="checkbox">
@@ -54,15 +52,11 @@
             <span>Slideshow playlist</span>
             <select id="slideshow-playlist"></select>
           </label>
-          <label class="field">
-            <span>Ambience playlist</span>
-            <select id="ambience-playlist"></select>
-          </label>
           <div class="button-row">
             <button id="manifest-refresh" type="button">Refresh Manifest</button>
             <button id="sync-trigger" type="button">Trigger Sync</button>
           </div>
-          <p class="note">Mode and clock changes are runtime state. They are stored separately from the main config.</p>
+          <p class="note">Still-photo slideshow is the primary display mode. Legacy ambience or auto settings fall back safely to slideshow.</p>
         </article>
 
         <article class="panel">

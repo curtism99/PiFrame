@@ -1,6 +1,6 @@
 # Widgets And NWS Weather
 
-PiFrame widgets are lightweight overlays rendered above slideshow and ambience
+PiFrame widgets are lightweight overlays rendered above slideshow and ambient
 media. They are optional and should never block media playback.
 
 V1 widgets:
@@ -67,5 +67,5 @@ they are not confused with real NWS warnings.
 ## Offline Behavior
 
 NWS weather requires internet access. If NWS is unavailable, PiFrame keeps using
-the last good cached weather payload and marks it stale. Slideshow and ambience
+the last good cached weather payload and marks it stale. Slideshow and ambient
 modes continue normally.

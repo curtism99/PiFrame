@@ -30,14 +30,8 @@ PiFrame-Media/
         family/
         travel/
         art/
-      videos/
-        fireplace/
-        clouds/
-        abstract/
-        short-clips/
-    playlists/              optional extra scan roots
+    playlists/              optional extra image scan roots
       slideshow.json
-      ambience.json
 ```
 
 The Pi mirrors that folder into:
@@ -46,17 +40,14 @@ The Pi mirrors that folder into:
 /srv/pi-picture-kiosk/media/
   media/
     photos/
-    videos/
   playlists/
     slideshow.json
-    ambience.json
 ```
 
 The NAS is the source of truth for media files, not the active runtime
-playlist selection. PiFrame always scans the configured default roots,
-`media/photos` for slideshow and `media/videos` for ambience, then the admin
-page lets you select `All` or a discovered folder such as `abstract` or
-`underwater`.
+playlist selection. PiFrame scans the configured `media/photos` root, then the
+admin page lets you select `All` or a discovered album such as `family` or
+`travel`.
 
 Synced playlist JSON files are optional extra scan roots for cases where media
 should be included from outside the default roots. Example:
@@ -64,23 +55,19 @@ should be included from outside the default roots. Example:
 ```json
 {
   "slideshow": [
-    "media/videos/short-clips"
+    "media/photos/family"
   ]
 }
 ```
 
-```json
-{
-  "ambience": [
-    "media/other-videos/waterfall"
-  ]
-}
-```
+Each default or extra scan root is recursive. Immediate child folders become
+separate slideshow groups. If a playlist file is missing, invalid, or stale,
+the app still scans the configured default photo root.
 
-Each default or extra scan root is recursive. Listing `media/videos` groups
-media by immediate child folders. Listing an extra folder keeps that folder as a
-separate category. If a playlist file is missing, invalid, or stale, the app
-still scans the configured default roots.
+Legacy `media/videos` folders may remain on the NAS during migration. They are
+synced as ordinary files but are not indexed or played by PiFrame. Existing
+ambience or auto display settings fall back to slideshow and appear as admin
+warnings until the old config is cleaned up.
 
 The Pi syncs the whole `office` folder into the local cache. The kiosk serves
 only the cached `media/` subfolder through the browser route `/media`.

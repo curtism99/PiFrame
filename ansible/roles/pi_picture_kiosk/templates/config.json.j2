@@ -9,19 +9,16 @@
     "root": "{{ frame_media_root }}",
     "asset_base_dir": "media",
     "fallback_dirs": {
-      "slideshow": ["media/photos"],
-      "ambience": ["media/videos"]
+      "slideshow": ["media/photos"]
     },
-    "allowed_image_extensions": [".jpg", ".jpeg", ".png", ".webp"],
-    "allowed_video_extensions": [".mp4", ".webm", ".mkv"]
+    "allowed_image_extensions": [".jpg", ".jpeg", ".png", ".webp"]
   },
   "playlists": {
-    "slideshow": "playlists/slideshow.json",
-    "ambience": "playlists/ambience.json"
+    "slideshow": "playlists/slideshow.json"
   },
   "display": {
     "orientation": "landscape",
-    "mode": "{{ frame_display_mode }}",
+    "mode": "slideshow",
     "hide_cursor": {{ frame_hide_cursor | default(true) | bool | lower }},
     "cursor_idle_seconds": {{ frame_cursor_idle_seconds | default(3) }},
     "transition_seconds": 3
@@ -35,20 +32,6 @@
       "enabled": true,
       "style": "random",
       "effects": ["fade", "dissolve", "dip"]
-    }
-  },
-  "ambience": {
-    "video_duration_minutes": 30,
-    "shuffle": true,
-    "muted": true
-  },
-  "auto_mode": {
-    "enabled": {{ frame_auto_mode_enabled | bool | lower }},
-    "strategy": "weighted-random",
-    "switch_mode_every_minutes": 30,
-    "weights": {
-      "slideshow": 70,
-      "ambience": 30
     }
   },
   "clock": {

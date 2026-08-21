@@ -26,25 +26,3 @@ export class MediaPicker {
     return this.queue.shift();
   }
 }
-
-export function weightedMode(weights = {}) {
-  const entries = Object.entries(weights)
-    .filter(([, weight]) => Number(weight) > 0)
-    .map(([mode, weight]) => [mode, Number(weight)]);
-
-  if (entries.length === 0) {
-    return Math.random() < 0.5 ? "slideshow" : "ambience";
-  }
-
-  const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
-  let cursor = Math.random() * total;
-
-  for (const [mode, weight] of entries) {
-    cursor -= weight;
-    if (cursor <= 0) {
-      return mode;
-    }
-  }
-
-  return entries[0][0];
-}

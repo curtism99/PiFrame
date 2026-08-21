@@ -9,7 +9,10 @@ export class SlideshowMode {
     this.runtimeOptions = runtimeOptions;
     this.shuffle = config.slideshow?.shuffle !== false;
     this.groups = normalizeSlideshowGroups(manifest.slideshow);
-    this.allItems = manifest.slideshow?.items ?? manifest.slideshow?.photos ?? [];
+    this.allItems = photoItems(
+      manifest.slideshow?.photos,
+      manifest.slideshow?.items
+    );
     this.timer = null;
     this.started = false;
     this.configurePlaylist(runtimeOptions?.selected_playlists?.slideshow);
@@ -32,11 +35,6 @@ export class SlideshowMode {
     window.clearTimeout(this.timer);
     this.timer = null;
     this.started = false;
-    this.stage.querySelectorAll("video").forEach((video) => {
-      video.pause();
-      video.removeAttribute("src");
-      video.load();
-    });
   }
 
   setRuntimeOptions(runtimeOptions = {}) {
@@ -70,11 +68,6 @@ export class SlideshowMode {
     }
 
     this.emptyState.hidden = true;
-    if (item.type === "video") {
-      this.showVideo(item);
-      return;
-    }
-
     this.showPhoto(item);
   }
 
@@ -115,28 +108,6 @@ export class SlideshowMode {
     }
 
     showLayer(this.stage, layer, transition);
-
-    this.timer = window.setTimeout(() => this.showNext(), this.slideSeconds() * 1000);
-  }
-
-  showVideo(item) {
-    const layer = document.createElement("div");
-    layer.className = "layer";
-
-    const video = document.createElement("video");
-    video.className = "ambience-video";
-    video.src = item.url;
-    video.autoplay = true;
-    video.loop = false;
-    video.playsInline = true;
-    video.muted = true;
-    video.preload = "auto";
-
-    video.addEventListener("ended", () => this.showNext(), { once: true });
-    video.addEventListener("error", () => this.showNext(), { once: true });
-    layer.append(video);
-    showLayer(this.stage, layer, this.pickTransition());
-    video.play().catch(() => {});
 
     this.timer = window.setTimeout(() => this.showNext(), this.slideSeconds() * 1000);
   }
@@ -196,11 +167,17 @@ function normalizeSlideshowGroups(slideshow = {}) {
       id: group.id ?? group.path ?? group.label,
       label: group.label ?? group.path ?? group.id,
       path: group.path ?? group.id,
-      items: Array.isArray(group.items) ? group.items : [],
-      photos: Array.isArray(group.photos) ? group.photos : [],
-      videos: Array.isArray(group.videos) ? group.videos : []
+      items: photoItems(group.photos, group.items),
+      photos: photoItems(group.photos, group.items)
     }))
     .filter((group) => group.id && group.items.length > 0);
+}
+
+function photoItems(photos, items) {
+  const candidates = Array.isArray(photos) && photos.length > 0
+    ? photos
+    : Array.isArray(items) ? items : [];
+  return candidates.filter((item) => item?.type !== "video");
 }
 
 function selectedGroup(groups, selectedId) {
