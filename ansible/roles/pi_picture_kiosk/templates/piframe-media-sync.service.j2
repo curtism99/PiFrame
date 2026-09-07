@@ -7,8 +7,10 @@ Wants=network-online.target
 Type=oneshot
 Environment=PIFRAME_NAS_SOURCE={{ frame_nas_source }}
 Environment=PIFRAME_NAS_SOURCE_SUBDIR={{ frame_nas_source_subdir | default('') }}
+Environment=PIFRAME_NAS_PHOTO_SUBDIR={{ frame_nas_photo_subdir | default('media/photos') }}
 Environment=PIFRAME_NAS_MOUNT_POINT={{ frame_nas_mount_point }}
 Environment=PIFRAME_LOCAL_CACHE={{ frame_media_root }}
 Environment=PIFRAME_CREDENTIALS_FILE={{ frame_nas_credentials_file }}
 Environment=PIFRAME_STATE_FILE={{ frame_state_dir }}/state.json
+Environment=PIFRAME_MIN_FREE_BYTES={{ frame_sync_min_free_bytes | default(1073741824) }}
 ExecStart={{ frame_app_dir }}/scripts/sync-from-nas.sh

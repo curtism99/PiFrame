@@ -3,11 +3,13 @@ set -euo pipefail
 
 NAS_SOURCE="${PIFRAME_NAS_SOURCE:-{{ frame_nas_source }}}"
 NAS_SOURCE_SUBDIR="${PIFRAME_NAS_SOURCE_SUBDIR:-{{ frame_nas_source_subdir | default('') }}}"
+NAS_PHOTO_SUBDIR="${PIFRAME_NAS_PHOTO_SUBDIR:-{{ frame_nas_photo_subdir | default('media/photos') }}}"
 MOUNT_POINT="${PIFRAME_NAS_MOUNT_POINT:-{{ frame_nas_mount_point }}}"
 LOCAL_CACHE="${PIFRAME_LOCAL_CACHE:-{{ frame_media_root }}}"
 CREDENTIALS_FILE="${PIFRAME_CREDENTIALS_FILE:-{{ frame_nas_credentials_file }}}"
 STATE_FILE="${PIFRAME_STATE_FILE:-{{ frame_state_dir }}/state.json}"
 LOG_FILE="${PIFRAME_SYNC_LOG:-/var/log/piframe-media-sync.log}"
+MIN_FREE_BYTES="${PIFRAME_MIN_FREE_BYTES:-{{ frame_sync_min_free_bytes | default(1073741824) }}}"
 NAS_HOST="${NAS_SOURCE#//}"
 NAS_HOST="${NAS_HOST%%/*}"
 
@@ -23,6 +25,16 @@ mkdir -p "$MOUNT_POINT" "$LOCAL_CACHE" "$(dirname "$STATE_FILE")"
 
 if [[ "$NAS_SOURCE_SUBDIR" = /* || "$NAS_SOURCE_SUBDIR" == *".."* ]]; then
   log "Invalid NAS source subdir: $NAS_SOURCE_SUBDIR"
+  exit 24
+fi
+
+if [[ -z "$NAS_PHOTO_SUBDIR" || "$NAS_PHOTO_SUBDIR" = /* || "$NAS_PHOTO_SUBDIR" == *".."* ]]; then
+  log "Invalid NAS photo subdir: $NAS_PHOTO_SUBDIR"
+  exit 24
+fi
+
+if [[ ! "$MIN_FREE_BYTES" =~ ^[0-9]+$ ]]; then
+  log "Invalid minimum free byte reserve: $MIN_FREE_BYTES"
   exit 24
 fi
 
@@ -60,17 +72,52 @@ if [[ ! -d "$SYNC_SOURCE" ]]; then
   exit 22
 fi
 
-log "Starting rsync from $SYNC_SOURCE/ to $LOCAL_CACHE/"
+PHOTO_SOURCE="$SYNC_SOURCE/$NAS_PHOTO_SUBDIR"
+PHOTO_CACHE="$LOCAL_CACHE/media/photos"
+
+if [[ ! -d "$PHOTO_SOURCE" ]]; then
+  log "Mounted photo source directory is unavailable: $PHOTO_SOURCE"
+  exit 22
+fi
+
+mkdir -p "$PHOTO_CACHE"
+
+SOURCE_BYTES="$(
+  find "$PHOTO_SOURCE" -type f \( \
+    -iname '*.jpg' -o \
+    -iname '*.jpeg' -o \
+    -iname '*.png' -o \
+    -iname '*.webp' \
+  \) -printf '%s\n' | awk '{ total += $1 } END { printf "%.0f\n", total }'
+)"
+CACHE_BYTES="$(du -sb "$PHOTO_CACHE" | awk '{ print $1 }')"
+AVAILABLE_BYTES="$(df -PB1 "$LOCAL_CACHE" | awk 'NR == 2 { print $4 }')"
+
+if (( SOURCE_BYTES + MIN_FREE_BYTES > AVAILABLE_BYTES + CACHE_BYTES )); then
+  log "Photo sync refused: source requires $SOURCE_BYTES bytes and the cache must retain $MIN_FREE_BYTES free bytes; cache has $CACHE_BYTES bytes and $AVAILABLE_BYTES bytes are available."
+  exit 28
+fi
+
+log "Starting photo-only rsync from $PHOTO_SOURCE/ to $PHOTO_CACHE/"
+log "Photo cache preflight: source=$SOURCE_BYTES bytes cache=$CACHE_BYTES bytes available=$AVAILABLE_BYTES bytes reserve=$MIN_FREE_BYTES bytes"
 set +e
 rsync \
-  -rltv \
+  -rlt \
   --human-readable \
+  --stats \
   --delete-after \
+  --delete-excluded \
   --no-owner \
   --no-group \
   --no-perms \
   --omit-dir-times \
-  "$SYNC_SOURCE"/ "$LOCAL_CACHE"/ 2>&1 | tee -a "$LOG_FILE"
+  --include='*/' \
+  --include='*.[jJ][pP][gG]' \
+  --include='*.[jJ][pP][eE][gG]' \
+  --include='*.[pP][nN][gG]' \
+  --include='*.[wW][eE][bB][pP]' \
+  --exclude='*' \
+  "$PHOTO_SOURCE"/ "$PHOTO_CACHE"/ 2>&1 | tee -a "$LOG_FILE"
 rsync_status=${PIPESTATUS[0]}
 set -e
 

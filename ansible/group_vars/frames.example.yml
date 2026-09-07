@@ -24,9 +24,13 @@ frame_nas_aliases:
   - "NAS-DS223"
 frame_nas_source: "//nas-ds223/PiFrame-Media"
 frame_nas_source_subdir: "office"
+frame_nas_photo_subdir: "media/photos"
 frame_nas_mount_point: "/mnt/pi-picture-kiosk-source"
 frame_nas_credentials_file: "/etc/pi-picture-kiosk/smb-credentials"
 frame_sync_interval_minutes: 15
+frame_sync_timer_enabled: true
+# Refuse a sync that would leave less than 1 GiB free on the media-cache volume.
+frame_sync_min_free_bytes: 1073741824
 
 frame_hide_cursor: true
 frame_cursor_idle_seconds: 3

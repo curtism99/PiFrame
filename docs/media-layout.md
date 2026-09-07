@@ -22,16 +22,14 @@ Pi cache media goes under:
       family/
       travel/
       art/
-  playlists/
-    slideshow.json
 ```
 
 The PiFrame config defines `media/photos` as its default discovery root. Adding
 a folder such as `media/photos/travel` under the NAS media tree is enough for
 PiFrame to discover it after sync and manifest refresh.
 
-Synced playlist files are optional extra image roots, not the normal place to
-choose the active album. For example:
+Playlist files are optional extra image roots for local development or custom
+deployments, not the normal place to choose the active album. For example:
 
 ```json
 {
@@ -49,8 +47,8 @@ photo; choosing a group limits display to that directory until the selection is
 changed or runtime state is reset. The active selection is stored on the Pi,
 not in NAS playlist JSON.
 
-The local cache root contains both `media/` and `playlists/`. The Express static
-route serves the `media/` subfolder at `/media`, so a cached file at
+The standard Pi cache contains the `media/` tree. The Express static route
+serves that subfolder at `/media`, so a cached file at
 `media/photos/family/example.jpg` is displayed from:
 
 ```text
@@ -67,7 +65,8 @@ Supported image extensions:
 
 Video and movie playback are no longer part of the primary PiFrame experience.
 The scanner ignores video extensions and legacy ambience roots, so
-`media/videos` is not required and video files cannot enter slideshow playback.
+`media/videos` is not copied to the Pi cache and video files cannot enter
+slideshow playback.
 
 Old configs remain safe:
 

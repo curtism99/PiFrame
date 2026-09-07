@@ -31,6 +31,8 @@ frame_nas_aliases:
   - "NAS-DS223"
 frame_nas_source: "//nas-ds223/PiFrame-Media"
 frame_nas_source_subdir: "office"
+frame_nas_photo_subdir: "media/photos"
+frame_sync_min_free_bytes: 1073741824
 ```
 
 Replace `192.168.0.10` with the actual Synology IP. The role writes the hostname
@@ -49,9 +51,11 @@ ansible-vault create group_vars/vault.yml
 ansible-playbook -i inventory.ini playbook.yml
 ```
 
-The playbook installs Node.js, Chromium, `cifs-utils`, `rsync`, deploys the app,
-templates config and credentials, enables the backend service, enables the sync
-timer, and installs a Chromium kiosk autostart desktop entry.
+The playbook installs Node.js, the Debian `chromium` package, `cifs-utils`,
+`rsync`, deploys the app, templates config and credentials, enables the backend
+service, enables the photo-only sync timer, and installs a Chromium kiosk
+autostart desktop entry. The sync reserves at least 1 GiB of free cache space by
+default.
 
 For a dedicated display, make sure `group_vars/frames.yml` names the desktop
 login user and enables desktop autologin:
@@ -83,6 +87,10 @@ ssh curtis@192.168.0.70 "sudo reboot"
 
 After boot, the Pi should log into the desktop and open Chromium fullscreen at
 `http://localhost:8080`.
+
+For recovery and first-sync validation, follow
+[power-loss-sd-card-recovery.md](power-loss-sd-card-recovery.md) before relying
+on the timer.
 
 For SSH-only control after a frontend deploy:
 

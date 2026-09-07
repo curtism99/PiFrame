@@ -3,7 +3,7 @@
   ansible.builtin.apt:
     name:
       - cifs-utils
-      - chromium-browser
+      - chromium
       - curl
       - nodejs
       - npm

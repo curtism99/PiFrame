@@ -23,10 +23,10 @@ or internet access after media has been cached locally.
 
 ```text
 Synology NAS folder
-  //nas-ds223/PiFrame-Media
+  //nas-ds223/PiFrame-Media/office/media/photos
         |
         v
-SMB mount + rsync timer
+SMB mount + photo-only rsync timer
         |
         v
 Raspberry Pi local cache
@@ -147,5 +147,6 @@ ansible-playbook -i inventory.ini playbook.yml
 Keep real SMB credentials out of git. Use Ansible Vault or local ignored vars for
 the NAS username and password.
 
-See the `docs/` folder for Raspberry Pi setup, Synology media layout, sync
-design, kiosk mode, Ansible deployment, and future multi-frame notes.
+See the `docs/` folder for Raspberry Pi setup, power-loss and SD-card recovery,
+Synology media layout, sync design, kiosk mode, Ansible deployment, and future
+multi-frame notes.

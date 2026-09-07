@@ -96,7 +96,8 @@ restart_browser() {
     exit 1
   fi
 
-  nohup "${LAUNCHER}" >>"${LOG_FILE}" 2>&1 &
+  mkdir -p "$(dirname "${LOG_FILE}")"
+  nohup "${LAUNCHER}" >/dev/null 2>&1 &
   echo "browser restart requested"
 }
 

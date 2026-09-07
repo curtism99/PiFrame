@@ -8,9 +8,9 @@ Flow:
 ```text
 //nas-ds223/PiFrame-Media
   -> /mnt/pi-picture-kiosk-source
-  -> office/
-  -> rsync
-  -> /srv/pi-picture-kiosk/media
+  -> office/media/photos/
+  -> supported-image filter + free-space preflight + rsync
+  -> /srv/pi-picture-kiosk/media/media/photos
 ```
 
 Use a stable NAS IP plus an Ansible-managed `/etc/hosts` entry:
@@ -22,6 +22,8 @@ frame_nas_aliases:
   - "NAS-DS223"
 frame_nas_source: "//nas-ds223/PiFrame-Media"
 frame_nas_source_subdir: "office"
+frame_nas_photo_subdir: "media/photos"
+frame_sync_min_free_bytes: 1073741824
 ```
 
 This keeps the SMB path readable without depending on Pi-hole, router DNS
@@ -30,10 +32,15 @@ quirks, NetBIOS, mDNS, or `.home.arpa`.
 The sync script:
 
 - mounts the SMB share if needed;
-- syncs from the configured source subfolder, such as `office`;
+- syncs supported images from the configured photo subfolder, such as
+  `office/media/photos`;
 - verifies the mount point is actually mounted;
 - refuses to run `rsync --delete-after` if the mount is unavailable;
-- logs to `/var/log/piframe-media-sync.log`;
+- refuses a transfer that would leave less than the configured free-space
+  reserve;
+- excludes videos, PSD files, and other unsupported content;
+- logs aggregate transfer statistics to `/var/log/piframe-media-sync.log`
+  without logging private photo filenames;
 - updates `/var/lib/pi-picture-kiosk/state.json` with `last_sync` after success.
 
 Manual command on the Pi:
@@ -83,8 +90,10 @@ Use the exact share name from that list in `frame_nas_source`.
 
 ## Rsync Failures
 
-If the service exits with status `23`, the NAS mounted but rsync could not copy
-one or more files. Check the full sync log instead of the clipped systemd view:
+If the service exits with status `11`, the NAS mounted but rsync encountered a
+file-I/O error. If the script exits with status `28`, its free-space preflight
+refused the transfer before rsync started. Check the sync log instead of the
+clipped systemd view:
 
 ```bash
 sudo tail -n 200 /var/log/piframe-media-sync.log
@@ -94,3 +103,6 @@ Common causes are unreadable files, unusual filenames, a file being changed on
 the NAS during sync, or destination write errors. The sync script does not try
 to preserve SMB ownership or permissions because the Pi cache only needs media
 files readable by the kiosk app.
+
+See [power-loss-sd-card-recovery.md](power-loss-sd-card-recovery.md) for guarded
+cache cleanup, reimage, redeploy, and physical acceptance steps.
