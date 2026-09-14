@@ -131,7 +131,9 @@ The display app supports multiple overlay widgets. V1 includes:
 The weather widget is optional and uses latitude/longitude from config. It
 caches the last good NWS response so the frame keeps working if internet or NWS
 is unavailable. The admin page includes a runtime-only test alert toggle for
-previewing severe thunderstorm and tornado alert display.
+previewing severe thunderstorm and tornado alert display. Checked-in examples
+use a public-landmark location; keep real coordinates only in ignored local
+configuration or Ansible Vault.
 
 ## Raspberry Pi Deployment
 

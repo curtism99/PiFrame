@@ -71,6 +71,10 @@ weather location belong. `config/frame.config.example.json` is only the local
 development fallback. Ansible renders the production config to
 `/etc/pi-picture-kiosk/config.json` on the Pi.
 
+The checked-in coordinates below point to the Statue of Liberty as an
+intentionally public example. Keep real coordinates in the ignored
+`group_vars/frames.yml` file or Ansible Vault.
+
 ```yaml
 frame_clock_position: "top-left"
 frame_weather_position: "top-right"

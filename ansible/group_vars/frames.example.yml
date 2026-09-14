@@ -45,6 +45,7 @@ frame_clock_enabled: true
 frame_clock_position: "top-left"
 frame_weather_enabled: true
 frame_weather_position: "top-right"
+# Public-landmark example: Statue of Liberty. Keep real coordinates private.
 frame_weather_latitude: 40.6892
 frame_weather_longitude: -74.0445
 frame_weather_units: "fahrenheit"

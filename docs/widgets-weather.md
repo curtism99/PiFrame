@@ -21,7 +21,9 @@ active NWS alerts with event name and time window
 
 ## Configuration
 
-Set weather location by latitude and longitude, not street address:
+Set weather location by latitude and longitude, not street address. This
+checked-in example points to the Statue of Liberty; keep real coordinates in
+the ignored `group_vars/frames.yml` file or Ansible Vault.
 
 ```yaml
 frame_weather_enabled: true
