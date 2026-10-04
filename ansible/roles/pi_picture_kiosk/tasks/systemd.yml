@@ -55,9 +55,9 @@
     state: started
     daemon_reload: true
 
-- name: Enable sync timer
+- name: Set sync timer to the requested deployment state
   ansible.builtin.systemd:
     name: piframe-media-sync.timer
-    enabled: true
-    state: started
+    enabled: "{{ frame_enable_sync_timer | default(true) | bool }}"
+    state: "{{ 'started' if (frame_enable_sync_timer | default(true) | bool) else 'stopped' }}"
     daemon_reload: true

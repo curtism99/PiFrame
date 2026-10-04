@@ -1,4 +1,5 @@
 ---
+- import_tasks: sync-preflight.yml
 - import_tasks: packages.yml
 - import_tasks: app.yml
 - import_tasks: config.yml
