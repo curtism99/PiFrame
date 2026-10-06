@@ -48,6 +48,12 @@ frame_weather_longitude: -74.0445
 frame_weather_units: "fahrenheit"
 frame_weather_test_alerts_enabled: false
 
+# Enable only in private variables. The READ token is for UISP Network, not CRM.
+frame_acc_traffic_enabled: false
+frame_acc_traffic_show_peaks: true
+# Supply frame_uisp_connection: {origin, device_id, token} using an ignored
+# *.local.yml extra-vars file or Ansible Vault; never put it in public kiosk config.
+
 # Store real values in an ignored vars file or Ansible Vault.
 frame_smb_username: "CHANGE_ME"
 frame_smb_password: "CHANGE_ME"

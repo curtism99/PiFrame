@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { publicTrafficConfig } from "../widgets/trafficConfig.js";
 
 export function configRouter({ config, runtimeState }) {
   const router = Router();
@@ -7,6 +8,7 @@ export function configRouter({ config, runtimeState }) {
     const state = await runtimeState.read();
     response.json({
       ...config,
+      widgets: { ...config.widgets, acc_traffic: publicTrafficConfig(config.widgets?.acc_traffic) },
       runtime: {
         state_path: runtimeState.path,
         current_mode: state.current_mode,

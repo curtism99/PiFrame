@@ -12,6 +12,7 @@ import { slideshowRouter } from "./routes/slideshow.js";
 import { syncRouter } from "./routes/sync.js";
 import { widgetsRouter } from "./routes/widgets.js";
 import { createWeatherService } from "./widgets/weatherService.js";
+import { createTrafficService } from "./widgets/trafficService.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const projectRoot = path.resolve(path.dirname(__filename), "..");
@@ -19,6 +20,10 @@ const projectRoot = path.resolve(path.dirname(__filename), "..");
 const { config, configPath, runtimeState } = await loadConfig(projectRoot);
 const manifestStore = createManifestStore(config, projectRoot);
 const weatherService = createWeatherService(config, runtimeState);
+const trafficService = createTrafficService(config);
+void trafficService.start();
+process.once("SIGTERM", () => { trafficService.stop(); process.exit(0); });
+process.once("SIGINT", () => { trafficService.stop(); process.exit(0); });
 
 const app = express();
 app.disable("x-powered-by");
@@ -44,7 +49,7 @@ app.use("/api/mode", modeRouter({ config, runtimeState }));
 app.use("/api/clock", clockRouter({ runtimeState }));
 app.use("/api/slideshow", slideshowRouter({ config, runtimeState }));
 app.use("/api/sync", syncRouter({ config, projectRoot }));
-app.use("/api/widgets", widgetsRouter({ config, runtimeState, weatherService }));
+app.use("/api/widgets", widgetsRouter({ config, runtimeState, weatherService, trafficService }));
 
 app.use((request, response) => {
   response.status(404).json({ error: "not_found" });

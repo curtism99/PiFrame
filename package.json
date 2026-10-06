@@ -9,7 +9,10 @@
     "start": "node server/server.js",
     "scan": "node scripts/scan-media.js",
     "check-media": "node scripts/check-media.js",
-    "test:sync": "python3 -m unittest discover -s tests -p test_media_sync.py"
+    "test:sync": "python3 -m unittest discover -s tests -p test_media_sync.py",
+    "test": "node --test tests/*.test.js",
+    "test:browser": "node tests/traffic.browser.cjs",
+    "test:deploy": "python3 -m unittest discover -s tests -p test_traffic_deploy.py"
   },
   "dependencies": {
     "express": "^4.19.2"

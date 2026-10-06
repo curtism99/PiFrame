@@ -23,3 +23,17 @@
     owner: root
     group: root
     mode: "0600"
+
+- name: Provision private UISP Network READ connection
+  ansible.builtin.template:
+    src: uisp-private.json.j2
+    dest: "{{ frame_config_dir }}/uisp.json"
+    owner: root
+    group: "{{ frame_kiosk_user }}"
+    mode: "0640"
+  when:
+    - frame_acc_traffic_enabled | default(false) | bool
+    - frame_uisp_connection is defined
+  no_log: true
+  diff: false
+  notify: Restart pi picture kiosk

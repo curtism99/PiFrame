@@ -58,6 +58,15 @@
     "position": "{{ frame_clock_position | default('bottom-right') }}"
   },
   "widgets": {
+    "acc_traffic": {
+      "enabled": {{ frame_acc_traffic_enabled | default(false) | bool | lower }},
+      "position": "bottom",
+      "label": "ACC uplink",
+      "window_minutes": 60,
+      "height_percent": 15,
+      "poll_seconds": 15,
+      "show_peaks": {{ frame_acc_traffic_show_peaks | default(true) | bool | lower }}
+    },
     "weather": {
       "enabled": {{ frame_weather_enabled | default(true) | bool | lower }},
       "provider": "nws",

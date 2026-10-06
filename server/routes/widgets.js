@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-export function widgetsRouter({ config, runtimeState, weatherService }) {
+export function widgetsRouter({ config, runtimeState, weatherService, trafficService }) {
   const router = Router();
 
   router.get("/", async (request, response) => {
@@ -14,6 +14,11 @@ export function widgetsRouter({ config, runtimeState, weatherService }) {
       },
       weather
     });
+  });
+
+  router.get("/krc-acc-traffic", (request, response) => {
+    response.setHeader("Cache-Control", "no-store");
+    response.json(trafficService.getSnapshot());
   });
 
   router.get("/weather", async (request, response) => {

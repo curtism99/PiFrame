@@ -13,7 +13,7 @@ import { configureCursorIdle } from "./cursorIdle.js";
 const stage = document.querySelector("#stage");
 const emptyState = document.querySelector("#empty-state");
 const widgetLayerElement = document.querySelector("#widget-layer");
-const CLIENT_BUILD = "widgets-weather-v1";
+const CLIENT_BUILD = "widgets-acc-traffic-v1";
 
 let config;
 let manifest;
@@ -24,6 +24,7 @@ let autoMode = null;
 let widgetLayer = null;
 let clockOverlay = null;
 let weatherWidget = null;
+let trafficWidget = null;
 let runtimeState = null;
 
 try {
@@ -52,11 +53,30 @@ try {
   const initialMode = runtimeState?.effective_mode ?? config.display?.mode ?? "slideshow";
   startDisplayMode(initialMode);
   pollRuntimeState();
+  // Load independently: optional graph failures must not abort the slideshow.
+  if (config.widgets?.acc_traffic?.enabled) {
+    void startTrafficWidget();
+  }
 } catch (error) {
   emptyState.hidden = false;
   emptyState.querySelector("h1").textContent = "Kiosk startup failed";
   emptyState.querySelector("p").textContent = error.message;
 }
+
+async function startTrafficWidget() {
+  const element = widgetLayer.getWidgetElement("acc-traffic", "bottom");
+  try {
+    const { TrafficWidget } = await import("./trafficWidget.js");
+    trafficWidget = new TrafficWidget(element, config.widgets.acc_traffic);
+    trafficWidget.start();
+  } catch {
+    trafficWidget?.stop();
+    element.hidden = true;
+    widgetLayerElement.classList.remove("has-traffic-rail");
+  }
+}
+
+window.addEventListener("pagehide", () => trafficWidget?.stop());
 
 function startDisplayMode(mode, options = {}) {
   const normalizedMode = normalizeMode(mode);

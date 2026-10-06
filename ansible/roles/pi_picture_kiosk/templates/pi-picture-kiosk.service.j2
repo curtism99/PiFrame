@@ -10,6 +10,7 @@ Group={{ frame_kiosk_user }}
 WorkingDirectory={{ frame_app_dir }}
 Environment=NODE_ENV=production
 Environment=PIFRAME_CONFIG_PATH={{ frame_config_dir }}/config.json
+Environment="PIFRAME_UISP_CONFIG_PATH={{ frame_config_dir }}/uisp.json"
 ExecStart=/usr/bin/node server/server.js
 Restart=on-failure
 RestartSec=5

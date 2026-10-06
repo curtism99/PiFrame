@@ -10,6 +10,7 @@ Group=piframe
 WorkingDirectory=/opt/pi-picture-kiosk
 Environment=NODE_ENV=production
 Environment=PIFRAME_CONFIG_PATH=/etc/pi-picture-kiosk/config.json
+Environment=PIFRAME_UISP_CONFIG_PATH=/etc/pi-picture-kiosk/uisp.json
 ExecStart=/usr/bin/node server/server.js
 Restart=on-failure
 RestartSec=5

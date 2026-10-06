@@ -1,4 +1,4 @@
-const POSITIONS = ["top-left", "top-right", "bottom-left", "bottom-right"];
+const POSITIONS = ["top-left", "top-right", "bottom-left", "bottom-right", "bottom"];
 
 export class WidgetLayer {
   constructor(element) {
@@ -6,6 +6,9 @@ export class WidgetLayer {
     this.zones = new Map();
     this.widgets = new Map();
     this.createZones();
+    this.resizeObserver = new ResizeObserver(() => this.layoutBottomCorners());
+    for (const position of ["bottom-left", "bottom-right"]) this.resizeObserver.observe(this.zones.get(position));
+    this.resizeObserver.observe(this.element);
   }
 
   getWidgetElement(id, position = "bottom-right") {
@@ -34,6 +37,13 @@ export class WidgetLayer {
       this.element.append(zone);
       this.zones.set(position, zone);
     }
+  }
+
+  layoutBottomCorners() {
+    const left = this.zones.get("bottom-left").getBoundingClientRect();
+    const right = this.zones.get("bottom-right").getBoundingClientRect();
+    const stacked = left.width > 0 && right.width > 0 && left.right + 12 > right.left;
+    this.element.style.setProperty("--bottom-corner-stack", stacked ? `${left.height + 12}px` : "0px");
   }
 }
 
