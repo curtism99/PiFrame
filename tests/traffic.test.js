@@ -12,7 +12,8 @@ import {
 import { createTrafficService, validatePrivateConfig, readPrivateConfig } from "../server/widgets/trafficService.js";
 import { configRouter } from "../server/routes/config.js";
 import { widgetsRouter } from "../server/routes/widgets.js";
-import { alignTraffic, plotTable, formatRate, directionState, formatLocalTime } from "../app/js/trafficModel.js";
+import { alignTraffic, plotTable, formatRate, directionState, formatLocalTime, summarizePeaks } from "../app/js/trafficModel.js";
+import { publicTrafficConfig } from "../server/widgets/trafficConfig.js";
 
 const T = 1_700_000_000_000;
 const privateFixture = { origin: "https://uisp.example.invalid", deviceId: "synthetic-device", token: "synthetic-read-token" };
@@ -31,6 +32,60 @@ const statistics = (value = 250e6, timestamp = T) => ({
   ]
 });
 const response = (data, status = 200, headers = {}) => new Response(JSON.stringify(data), { status, headers });
+
+test("peak readings keep latest reported max separate from rolling-hour high and source age", () => {
+  const points = [
+    { timestampMs: T - 3_600_001, bps: 9e9 },
+    { timestampMs: T - 3_600_000, bps: 1.9e9 },
+    { timestampMs: T - 19_000, bps: 200e6 },
+    { timestampMs: T - 11_000, bps: 400e6 },
+    { timestampMs: T - 3_000, bps: 0 },
+    { timestampMs: T + 1, bps: 10e9 }
+  ];
+  const peak = summarizePeaks(points, T);
+  assert.equal(peak.latestBps, 0);
+  assert.equal(peak.latestTimestampMs, T - 3000);
+  assert.equal(peak.age, "3s");
+  assert.equal(peak.highBps, 1.9e9);
+  assert.equal(peak.stale, false);
+  assert.equal(peak.unknown, false);
+  // Both time boundaries move; the old high exits and the future observation enters.
+  assert.equal(summarizePeaks(points.slice(0, -1), T + 1).highBps, 400e6);
+  assert.equal(summarizePeaks(points, T + 1).highBps, 10e9);
+});
+
+test("unknown latest peaks do not carry forward old maxima; stale and revised data remain explicit", () => {
+  const points = [{ timestampMs: T - 180_000, bps: 700e6 }, { timestampMs: T - 2000, bps: null }];
+  for (const invalid of [null, undefined, -1, NaN, Infinity]) {
+    const peak = summarizePeaks([points[0], { ...points[1], bps: invalid }], T);
+    assert.equal(peak.latestBps, null);
+    assert.equal(peak.highBps, 700e6);
+    assert.equal(peak.unknown, true);
+    assert.equal(peak.stale, true);
+  }
+  const revised = summarizePeaks(normalizePoints([
+    { x: T - 2000, y: 800e6 }, { x: T - 2000, y: 300e6 }
+  ]), T);
+  assert.equal(revised.latestBps, 300e6);
+  assert.equal(revised.highBps, 300e6);
+  assert.equal(summarizePeaks(points, T + 3_600_000).highBps, null);
+  assert.equal(summarizePeaks([], T).age, "waiting");
+});
+
+test("peak freshness uses its own spacing and poll interval rather than the average direction", () => {
+  const points = [T - 220_000, T - 180_000, T - 140_000].map((timestampMs) => ({ timestampMs, bps: 10e6 }));
+  assert.equal(summarizePeaks(points, T).stale, true); // 140s > 3 x 40s
+  assert.equal(summarizePeaks(points, T, 60_000).stale, false); // 3 x poll = 180s
+});
+
+test("public circuit capacity accepts only a positive numeric rate and never connection fields", () => {
+  assert.equal(publicTrafficConfig({ capacity_bps: 2e9, token: "private-token" }).capacity_bps, 2e9);
+  assert.equal(publicTrafficConfig({}).capacity_bps, null);
+  for (const invalid of [0, -1, null, "2000000000", Infinity, NaN]) {
+    assert.equal(publicTrafficConfig({ capacity_bps: invalid }).capacity_bps, null);
+  }
+  assert.equal("token" in publicTrafficConfig({ token: "private-token" }), false);
+});
 
 function harness(fetchImpl, overrides = {}) {
   let time = T + 5000;

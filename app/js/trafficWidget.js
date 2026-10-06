@@ -1,6 +1,6 @@
 import uPlot from "../vendor/uplot-1.6.32/uPlot.esm.js";
 import { fetchTrafficWidget } from "./widgetClient.js";
-import { alignTraffic, formatRate, formatAge, directionState, formatLocalTime } from "./trafficModel.js";
+import { alignTraffic, formatRate, formatAge, directionState, formatLocalTime, summarizePeaks } from "./trafficModel.js";
 
 export class TrafficWidget {
   constructor(element, config = {}) {
@@ -35,16 +35,27 @@ export class TrafficWidget {
     this.element.setAttribute("aria-label", "ACC uplink traffic over the last hour");
     this.element.innerHTML = `
       <div class="traffic-heading">
-        <strong>ACC uplink</strong>
-        <span class="traffic-rate traffic-rx"><i></i>RX / from provider <b data-rate="rx">—</b><small data-age="rx">waiting</small></span>
-        <span class="traffic-rate traffic-tx"><i></i>TX / to provider <b data-rate="tx">—</b><small data-age="tx">waiting</small></span>
-        <span class="traffic-peaks"><i></i>peaks</span>
+        <div class="traffic-title"><strong>ACC uplink</strong><small data-capacity></small></div>
+        ${["rx", "tx"].map((name) => `
+          <div class="traffic-direction traffic-${name}">
+            <div class="traffic-rate"><span class="traffic-direction-label"><i></i>${name === "rx" ? "RX / from provider" : "TX / to provider"}</span>
+              <span>avg <b data-rate="${name}">—</b></span>
+              <span data-peak-group>peak <b data-peak="${name}">—</b></span>
+            </div>
+            <div class="traffic-detail"><small data-age="${name}">waiting</small>
+              <small data-peak-group data-peak-age="${name}">peak waiting</small>
+              <span data-peak-group>1h high <b data-high="${name}">—</b></span>
+            </div>
+          </div>`).join("")}
         <span class="traffic-health" data-health>Waiting for UISP</span>
       </div>
       <div class="traffic-plot" role="img" aria-label="RX and TX averages and peaks, in Mbps or Gbps"></div>
       <div class="traffic-footer"><span data-status>Waiting for recorded samples</span><span data-api>API refresh: waiting · Chicago time</span></div>`;
     this.plotElement = this.element.querySelector(".traffic-plot");
-    this.element.querySelector(".traffic-peaks").hidden = this.config.show_peaks === false;
+    for (const group of this.element.querySelectorAll("[data-peak-group]")) group.hidden = this.config.show_peaks === false;
+    const capacity = this.element.querySelector("[data-capacity]");
+    capacity.hidden = !Number.isFinite(this.config.capacity_bps) || this.config.capacity_bps <= 0;
+    capacity.textContent = `Circuit: ${formatRate(this.config.capacity_bps)}`;
     this.element.closest(".widget-layer")?.classList.add("has-traffic-rail");
     document.addEventListener("visibilitychange", this.onVisibility);
     this.motion.addEventListener("change", this.onMotion);
@@ -72,8 +83,8 @@ export class TrafficWidget {
         {},
         { label: "RX average", stroke: "#56def5", width: 2, spanGaps: false, points: { show: false } },
         { label: "TX average", stroke: "#ffc66d", width: 2, spanGaps: false, points: { show: false } },
-        { label: "RX peak", stroke: "rgba(86,222,245,0.36)", width: 1, dash: [4, 5], show: peaks, spanGaps: false, points: { show: false } },
-        { label: "TX peak", stroke: "rgba(255,198,109,0.36)", width: 1, dash: [4, 5], show: peaks, spanGaps: false, points: { show: false } }
+        { label: "RX peak", stroke: "rgba(86,222,245,0.8)", width: 2, dash: [6, 4], show: peaks, spanGaps: false, points: { show: false } },
+        { label: "TX peak", stroke: "rgba(255,198,109,0.8)", width: 2, dash: [6, 4], show: peaks, spanGaps: false, points: { show: false } }
       ],
       axes: [
         { stroke: "#c1cbd3", font: "11px system-ui", size: 23, space: 130,
@@ -144,6 +155,12 @@ export class TrafficWidget {
       const age = this.element.querySelector(`[data-age="${name}"]`);
       age.textContent = `sample ${state.age}${state.stale ? " · stale" : ""}`;
       age.classList.toggle("is-stale", state.stale);
+      const peak = summarizePeaks(data.series[`${name}Peak`], now, data.pollIntervalMs);
+      this.element.querySelector(`[data-peak="${name}"]`).textContent = formatRate(peak.latestBps);
+      this.element.querySelector(`[data-high="${name}"]`).textContent = formatRate(peak.highBps);
+      const peakAge = this.element.querySelector(`[data-peak-age="${name}"]`);
+      peakAge.textContent = `peak ${peak.age}${peak.unknown ? " · unknown" : ""}${peak.stale ? " · stale" : ""}`;
+      peakAge.classList.toggle("is-stale", peak.stale || peak.unknown);
     }
     const stale = ["rx", "tx"].some((name) => directionState(data.freshness[name], now).stale);
     const apiStale = data.fetchedAtMs === null || now - data.fetchedAtMs > 60_000;
@@ -151,7 +168,7 @@ export class TrafficWidget {
     const link = linkStale ? "link unverified" : `link ${data.link.state}${data.link.speed ? ` · ${data.link.speed}` : ""}`;
     this.element.querySelector("[data-health]").textContent = link;
     const status = this.fetchFailed ? "Frame API unavailable · cached samples" : data.error?.message ??
-      (data.status === "disabled" ? "Widget disabled" : stale ? "Recorded traffic is stale" : "Recorded traffic · averages and peaks");
+      (data.status === "disabled" ? "Widget disabled" : stale ? "Recorded traffic is stale" : "Recorded traffic · solid avg / dashed peak");
     this.element.querySelector("[data-status]").textContent = status;
     this.element.querySelector("[data-api]").textContent = `API refresh ${formatAge(data.fetchedAtMs, now)}${apiStale ? " · stale" : ""} · Chicago time`;
     this.element.classList.toggle("traffic-error", Boolean(data.error) || this.fetchFailed || stale || apiStale);

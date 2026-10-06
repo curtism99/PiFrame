@@ -65,7 +65,8 @@
       "window_minutes": 60,
       "height_percent": 15,
       "poll_seconds": 15,
-      "show_peaks": {{ frame_acc_traffic_show_peaks | default(true) | bool | lower }}
+      "show_peaks": {{ frame_acc_traffic_show_peaks | default(true) | bool | lower }},
+      "capacity_bps": {{ frame_acc_traffic_capacity_bps | default(0) | int }}
     },
     "weather": {
       "enabled": {{ frame_weather_enabled | default(true) | bool | lower }},

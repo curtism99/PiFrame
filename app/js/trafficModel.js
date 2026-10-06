@@ -53,6 +53,25 @@ export function directionState(direction, nowMs) {
   };
 }
 
+export function summarizePeaks(points = [], nowMs, pollIntervalMs = 15_000) {
+  // Each peak series has its own timestamps, independent of average samples.
+  const visible = points.filter((point) => Number.isFinite(point.timestampMs) &&
+    point.timestampMs >= nowMs - 3_600_000 && point.timestampMs <= nowMs);
+  const valid = (point) => Number.isFinite(point.bps) && point.bps >= 0;
+  const numeric = visible.filter(valid);
+  const latest = visible.at(-1);
+  const latestValid = numeric.at(-1);
+  const staleAfterMs = Math.max(60_000, 3 * (spacing(numeric) ?? 0), 3 * pollIntervalMs);
+  return {
+    latestBps: latest && valid(latest) ? latest.bps : null,
+    latestTimestampMs: latest?.timestampMs ?? null,
+    highBps: numeric.length ? Math.max(...numeric.map((point) => point.bps)) : null,
+    age: formatAge(latest?.timestampMs, nowMs),
+    stale: !latestValid || nowMs - latestValid.timestampMs > staleAfterMs,
+    unknown: !latest || !valid(latest)
+  };
+}
+
 const localTime = new Intl.DateTimeFormat("en-US", {
   timeZone: "America/Chicago", hour: "numeric", minute: "2-digit"
 });

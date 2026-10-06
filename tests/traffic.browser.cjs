@@ -14,6 +14,7 @@ const { chromium } = require(process.env.PIFRAME_PLAYWRIGHT_MODULE || "playwrigh
   const root = path.resolve(__dirname, "..");
   const config = JSON.parse(await fs.readFile(path.join(root, "config/frame.config.example.json"), "utf8"));
   config.widgets.acc_traffic.enabled = true;
+  config.widgets.acc_traffic.capacity_bps = 2e9;
   config.display.hide_cursor = false;
   config.display.transition_seconds = 0.2;
   config.slideshow.photo_duration_seconds = 1;
@@ -31,8 +32,8 @@ const { chromium } = require(process.env.PIFRAME_PLAYWRIGHT_MODULE || "playwrigh
         y: i >= 250 && i < 270 ? null : base * (0.65 + 0.3 * Math.sin(i / 13) ** 2) * factor
       }));
       return new Response(JSON.stringify({ period: 15000, interfaces: [{ id: "port1", name: "ATTUplink",
-        receive: { avg: points(500e6, 0, 1), max: points(500e6, 0, 1.35) },
-        transmit: { avg: points(80e6, 2000, 1), max: points(80e6, 2000, 1.4) }
+        receive: { avg: points(500e6, 0, 1), max: points(500e6, -4000, 1.35) },
+        transmit: { avg: points(80e6, 2000, 1), max: points(80e6, -2000, 1.4) }
       }] }));
     }
   });
@@ -64,6 +65,26 @@ const { chromium } = require(process.env.PIFRAME_PLAYWRIGHT_MODULE || "playwrigh
     });
     await page.goto(`http://127.0.0.1:${server.address().port}`);
     await page.waitForFunction(() => window.testTraffic?.data?.status === "ok" && document.querySelector(".layer.is-visible"));
+    const readouts = await page.evaluate(async () => {
+      const { formatRate } = await import("/js/trafficModel.js");
+      return ["rx", "tx"].map((name) => {
+        const points = window.testTraffic.data.series[`${name}Peak`];
+        return {
+          peak: document.querySelector(`[data-peak="${name}"]`).textContent,
+          high: document.querySelector(`[data-high="${name}"]`).textContent,
+          expectedPeak: formatRate(points.at(-1).bps),
+          expectedHigh: formatRate(Math.max(...points.filter((p) => p.bps !== null).map((p) => p.bps))),
+          ownTimestamp: points.at(-1).timestampMs,
+          averageTimestamp: window.testTraffic.data.freshness[name].latestTimestampMs
+        };
+      });
+    });
+    for (const reading of readouts) {
+      assert.equal(reading.peak, reading.expectedPeak);
+      assert.equal(reading.high, reading.expectedHigh);
+      assert.notEqual(reading.ownTimestamp, reading.averageTimestamp);
+    }
+    assert.equal(await page.locator("[data-capacity]").innerText(), "Circuit: 2.00 Gbps");
     await fs.mkdir(path.join(root, ".runtime"), { recursive: true });
     for (const [width, height] of [[1920, 1080], [1280, 720], [800, 600], [480, 800]]) {
       await page.setViewportSize({ width, height });
@@ -77,12 +98,19 @@ const { chromium } = require(process.env.PIFRAME_PLAYWRIGHT_MODULE || "playwrigh
           rail: rect(".traffic-widget"), clock: rect(".clock-widget"), weather: rect(".weather-widget"),
           stage: rect("#stage"), canvas: rect(".traffic-plot canvas"),
           heading: rect(".traffic-heading"), footer: rect(".traffic-footer"),
+          plot: rect(".traffic-plot"),
+          details: [...document.querySelectorAll(".traffic-direction")].map((el) => ({
+            right: el.getBoundingClientRect().right,
+            overflow: el.scrollWidth > el.clientWidth,
+            hiddenPeaks: [...el.querySelectorAll("[data-peak-group]")].some((p) => getComputedStyle(p).display === "none")
+          })),
           x: window.testTraffic.plot.scales.x, y: window.testTraffic.plot.scales.y,
           show: window.testTraffic.plot.series.slice(1).map((s) => s.show),
           dataEnd: window.testTraffic.plot.data[0].at(-1),
           lastObserved: Math.max(...Object.values(window.testTraffic.data.series).flat().map((p) => p.timestampMs)) / 1000
         };
       });
+      await page.screenshot({ path: path.join(root, `.runtime/traffic-${width}x${height}.png`) });
       assert.equal(geometry.rail.left, 0);
       assert.equal(geometry.rail.width, width);
       assert.equal(geometry.rail.bottom, height);
@@ -94,12 +122,19 @@ const { chromium } = require(process.env.PIFRAME_PLAYWRIGHT_MODULE || "playwrigh
       assert.equal(geometry.stage.height, height);
       assert.ok(geometry.footer.bottom <= height);
       assert.ok(geometry.canvas.height > 50);
+      assert.ok(geometry.heading.bottom <= geometry.plot.top, "peak header fits above graph");
+      assert.ok(geometry.plot.bottom <= geometry.footer.top, "graph fits above footer");
+      for (const direction of geometry.details) {
+        assert.ok(direction.right <= width);
+        assert.equal(direction.overflow, false, "numeric peak readouts fit the rail");
+        assert.equal(direction.hiddenPeaks, false, "peaks remain visible at every viewport");
+      }
       assert.equal(geometry.y.min, 0);
       assert.ok(geometry.y.max >= 600e6, "Y scale includes peak lines");
+      assert.ok(geometry.y.max < 2e9, "circuit header does not force the automatic scale");
       assert.deepEqual(geometry.show, [true, true, true, true]);
       assert.ok(Math.abs((geometry.x.max - geometry.x.min) - 3600) < 0.001);
       assert.equal(geometry.dataEnd, geometry.lastObserved, "no extrapolated points after source end");
-      await page.screenshot({ path: path.join(root, `.runtime/traffic-${width}x${height}.png`) });
       console.log(`Layout ${width}x${height}: full-width rail, four series, zero-based scale, lifted clock/weather`);
     }
     await page.setViewportSize({ width: 1920, height: 1080 });
@@ -145,6 +180,20 @@ const { chromium } = require(process.env.PIFRAME_PLAYWRIGHT_MODULE || "playwrigh
       return widget.element.querySelector('[data-age="rx"]').textContent;
     });
     assert.match(staleText, /stale/);
+    const peakState = await page.evaluate(() => {
+      const widget = window.testTraffic;
+      const now = Date.now();
+      widget.data.series.rxPeak = [{ timestampMs: now - 180000, bps: 1.7e9 }, { timestampMs: now - 1000, bps: null }];
+      widget.draw();
+      return {
+        latest: widget.element.querySelector('[data-peak="rx"]').textContent,
+        high: widget.element.querySelector('[data-high="rx"]').textContent,
+        age: widget.element.querySelector('[data-peak-age="rx"]').textContent
+      };
+    });
+    assert.equal(peakState.latest, "—");
+    assert.equal(peakState.high, "1.70 Gbps");
+    assert.match(peakState.age, /unknown.*stale/);
     await page.evaluate(() => {
       window.testTraffic.data.error = { code: "network", message: "UISP is unreachable; retrying" };
       window.testTraffic.draw();
@@ -156,6 +205,15 @@ const { chromium } = require(process.env.PIFRAME_PLAYWRIGHT_MODULE || "playwrigh
     assert.equal(await page.evaluate(() => window.testTraffic.redrawTimer), null);
     assert.equal(await page.evaluate(() => getComputedStyle(window.testTraffic.element).display), "none");
     assert.equal(await page.locator(".has-traffic-rail").count(), 0);
+    await page.evaluate(() => {
+      window.testTraffic.config.show_peaks = false;
+      window.testTraffic.start();
+    });
+    await page.waitForFunction(() => !window.testTraffic.controller);
+    assert.deepEqual(await page.evaluate(() => window.testTraffic.plot.series.slice(1).map((s) => s.show)), [true, true, false, false]);
+    assert.equal(await page.locator("[data-peak-group]:visible").count(), 0);
+    assert.equal(await page.locator("[data-capacity]").innerText(), "Circuit: 2.00 Gbps");
+    await page.evaluate(() => window.testTraffic.stop());
     assert.deepEqual(errors, []);
     console.log("Scrolling, fixed measurements, slideshow transitions, reduced motion, hidden/destroyed lifecycle and stale/error display passed");
   } finally {

@@ -30,8 +30,26 @@
     - admin
     - server
     - scripts
-    - config
   notify: Restart pi picture kiosk
+
+- name: Create public configuration examples directory
+  ansible.builtin.file:
+    path: "{{ frame_app_dir }}/config"
+    state: directory
+    owner: "{{ frame_kiosk_user }}"
+    group: "{{ frame_kiosk_user }}"
+    mode: "0755"
+
+- name: Deploy only named public configuration examples
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../config/{{ item }}"
+    dest: "{{ frame_app_dir }}/config/{{ item }}"
+    owner: "{{ frame_kiosk_user }}"
+    group: "{{ frame_kiosk_user }}"
+    mode: "0644"
+  loop:
+    - frame.config.example.json
+    - uisp.example.json
 
 - name: Deploy package metadata
   ansible.builtin.copy:

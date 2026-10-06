@@ -1,0 +1,199 @@
+---
+- name: Update ACC traffic widget on an existing PiFrame
+  hosts: frames
+  become: true
+  gather_facts: false
+  vars:
+    frame_app_dir: /opt/pi-picture-kiosk
+    frame_config_dir: /etc/pi-picture-kiosk
+    frame_service_name: pi-picture-kiosk
+    acc_public_settings:
+      enabled: true
+      position: bottom
+      label: ACC uplink
+      window_minutes: 60
+      height_percent: 15
+      poll_seconds: 15
+      show_peaks: "{{ frame_acc_traffic_show_peaks | default(true) | bool }}"
+      capacity_bps: "{{ frame_acc_traffic_capacity_bps | default(0) | int }}"
+  tasks:
+    - name: Require private UISP deployment configuration
+      ansible.builtin.assert:
+        that:
+          - frame_acc_traffic_enabled | default(false) | bool
+          - frame_uisp_connection is mapping
+          - frame_uisp_connection.origin is match('^https://[^/]+/?$')
+          - frame_uisp_connection.device_id | length > 0
+          - frame_uisp_connection.token | length > 0
+        fail_msg: Supply the ignored UISP extra-vars file with a Network READ token.
+      no_log: true
+
+    - name: Read installed backend unit identity
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - show
+          - "{{ frame_service_name }}.service"
+          - --property=LoadState,User,Group,WorkingDirectory
+      register: installed_unit
+      changed_when: false
+      check_mode: false
+
+    - name: Require the existing PiFrame installation
+      ansible.builtin.assert:
+        that:
+          - "'LoadState=loaded' in installed_unit.stdout_lines"
+          - "('WorkingDirectory=' ~ frame_app_dir) in installed_unit.stdout_lines"
+        fail_msg: This update requires an existing backend unit in the configured application directory.
+
+    - name: Use the existing backend account
+      ansible.builtin.set_fact:
+        acc_service_user: "{{ (installed_unit.stdout_lines | select('match', '^User=') | first | regex_replace('^User=', '')) or 'root' }}"
+        acc_service_group: "{{ installed_unit.stdout_lines | select('match', '^Group=') | first | regex_replace('^Group=', '') }}"
+
+    - name: Read the backend account primary group
+      ansible.builtin.command:
+        argv: [id, -gn, "{{ acc_service_user }}"]
+      register: primary_group
+      changed_when: false
+      check_mode: false
+      when: acc_service_group | length == 0
+
+    - name: Resolve backend group
+      ansible.builtin.set_fact:
+        acc_service_group: "{{ acc_service_group or primary_group.stdout }}"
+
+    - name: Require Node 20 or newer and installed Express
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/node
+          - -e
+          - "if (Number(process.versions.node.split('.')[0]) < 20) process.exit(1); require('express');"
+      args:
+        chdir: "{{ frame_app_dir }}"
+      changed_when: false
+      check_mode: false
+
+    - name: Read existing public kiosk settings
+      ansible.builtin.slurp:
+        src: "{{ frame_config_dir }}/config.json"
+      register: existing_config_file
+      no_log: true
+
+    - name: Decode existing public settings
+      ansible.builtin.set_fact:
+        acc_existing_config: "{{ existing_config_file.content | b64decode | from_json }}"
+      no_log: true
+
+    - name: Back up existing public settings once before this widget update
+      ansible.builtin.copy:
+        remote_src: true
+        src: "{{ frame_config_dir }}/config.json"
+        dest: "{{ frame_config_dir }}/config.before-acc-widget.json"
+        force: false
+        owner: root
+        group: root
+        mode: "0600"
+      no_log: true
+      diff: false
+
+    - name: Deploy widget browser and backend code
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../{{ item }}/"
+        dest: "{{ frame_app_dir }}/{{ item }}/"
+        owner: "{{ acc_service_user }}"
+        group: "{{ acc_service_group }}"
+        mode: preserve
+      loop: [app, server]
+      notify: Restart widget backend
+
+    - name: Provision protected UISP Network READ connection
+      ansible.builtin.template:
+        src: roles/pi_picture_kiosk/templates/uisp-private.json.j2
+        dest: "{{ frame_config_dir }}/uisp.json"
+        owner: root
+        group: "{{ acc_service_group }}"
+        mode: "0640"
+      no_log: true
+      diff: false
+      notify: Restart widget backend
+
+    - name: Enable only the ACC widget in existing public settings
+      ansible.builtin.copy:
+        content: "{{ acc_existing_config | combine({'widgets': (acc_existing_config.widgets | default({})) | combine({'acc_traffic': acc_public_settings})}) | to_nice_json }}\n"
+        dest: "{{ frame_config_dir }}/config.json"
+        owner: root
+        group: root
+        mode: "0644"
+      no_log: true
+      diff: false
+      notify: Restart widget backend
+
+    - name: Create backend systemd drop-in directory
+      ansible.builtin.file:
+        path: "/etc/systemd/system/{{ frame_service_name }}.service.d"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Wire private UISP file into the existing service
+      ansible.builtin.copy:
+        content: |
+          [Service]
+          Environment="PIFRAME_CONFIG_PATH={{ frame_config_dir }}/config.json"
+          Environment="PIFRAME_UISP_CONFIG_PATH={{ frame_config_dir }}/uisp.json"
+        dest: "/etc/systemd/system/{{ frame_service_name }}.service.d/40-uisp.conf"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart widget backend
+
+    - name: Apply backend restart before validation
+      ansible.builtin.meta: flush_handlers
+
+    - name: Wait for cached ACC traffic response
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ acc_existing_config.server.port | default(8080) }}/api/widgets/krc-acc-traffic"
+        return_content: true
+      register: acc_result
+      until: acc_result.status | default(0) == 200 and acc_result.json.status | default('waiting') != 'waiting'
+      retries: 20
+      delay: 2
+      when: not ansible_check_mode
+
+    - name: Show sanitized widget acceptance summary
+      ansible.builtin.debug:
+        msg:
+          status: "{{ acc_result.json.status }}"
+          error: "{{ acc_result.json.error }}"
+          link: "{{ acc_result.json.link }}"
+          freshness: "{{ acc_result.json.freshness }}"
+          rx_points: "{{ acc_result.json.series.rx | length }}"
+          tx_points: "{{ acc_result.json.series.tx | length }}"
+      when: not ansible_check_mode
+
+    - name: Validate slideshow manifest after backend update
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ acc_existing_config.server.port | default(8080) }}/api/manifest"
+        return_content: true
+      register: acc_manifest_result
+      until: acc_manifest_result.status | default(0) == 200
+      retries: 5
+      delay: 2
+      no_log: true
+      when: not ansible_check_mode
+
+    - name: Show manifest counts without media filenames
+      ansible.builtin.debug:
+        msg:
+          photos: "{{ acc_manifest_result.json.counts.photos }}"
+          slideshow_items: "{{ acc_manifest_result.json.counts.slideshow_items }}"
+      when: not ansible_check_mode
+
+  handlers:
+    - name: Restart widget backend
+      ansible.builtin.systemd:
+        name: "{{ frame_service_name }}.service"
+        daemon_reload: true
+        state: restarted

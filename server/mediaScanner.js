@@ -7,8 +7,11 @@ export async function scanMedia(config, projectRoot) {
     : path.resolve(projectRoot, config.media.root);
   const mediaAssetRoot = getMediaAssetRoot(config, mediaRoot);
 
-  const imageExtensions = new Set(config.media.allowed_image_extensions.map((item) => item.toLowerCase()));
-  const videoExtensions = new Set(config.media.allowed_video_extensions.map((item) => item.toLowerCase()));
+  const imageExtensions = new Set((config.media.allowed_image_extensions ?? [".jpg", ".jpeg", ".png", ".webp"])
+    .map((item) => item.toLowerCase()));
+  // Photo-only configurations intentionally omit video support.
+  const videoExtensions = new Set((config.media.allowed_video_extensions ?? [])
+    .map((item) => item.toLowerCase()));
   const allMediaExtensions = new Set([...imageExtensions, ...videoExtensions]);
 
   const slideshowDirs = await resolvePlaylistDirs(config, mediaRoot, "slideshow");

@@ -7,6 +7,7 @@ export function publicTrafficConfig(settings = {}) {
     window_minutes: 60,
     height_percent: 15,
     poll_seconds: 15,
-    show_peaks: settings.show_peaks !== false
+    show_peaks: settings.show_peaks !== false,
+    capacity_bps: Number.isFinite(settings.capacity_bps) && settings.capacity_bps > 0 ? settings.capacity_bps : null
   };
 }

@@ -82,7 +82,8 @@
       "window_minutes": 60,
       "height_percent": 15,
       "poll_seconds": 15,
-      "show_peaks": true
+      "show_peaks": true,
+      "capacity_bps": null
     },
     "weather": {
       "enabled": true,
