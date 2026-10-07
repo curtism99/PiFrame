@@ -1,6 +1,6 @@
 import uPlot from "../vendor/uplot-1.6.32/uPlot.esm.js";
 import { fetchTrafficWidget } from "./widgetClient.js";
-import { alignTraffic, formatRate, formatAge, directionState, formatLocalTime, summarizePeaks } from "./trafficModel.js";
+import { alignTraffic, formatRate, formatAge, directionState, formatLocalTime, summarizePeaks, currentReading } from "./trafficModel.js";
 
 export class TrafficWidget {
   constructor(element, config = {}) {
@@ -38,8 +38,8 @@ export class TrafficWidget {
         <div class="traffic-title"><strong>ACC uplink</strong><small data-capacity></small></div>
         ${["rx", "tx"].map((name) => `
           <div class="traffic-direction traffic-${name}">
-            <div class="traffic-rate"><span class="traffic-direction-label"><i></i>${name === "rx" ? "RX / from provider" : "TX / to provider"}</span>
-              <span>avg <b data-rate="${name}">—</b></span>
+            <div class="traffic-rate"><span class="traffic-direction-label">${name === "rx" ? "RX / from provider" : "TX / to provider"}</span>
+              <span title="Latest recorded UISP average; last known value when stale or unknown"><span data-rate-label="${name}">current</span> <b data-rate="${name}">—</b></span>
               <span data-peak-group>peak <b data-peak="${name}">—</b></span>
             </div>
             <div class="traffic-detail"><small data-age="${name}">waiting</small>
@@ -150,11 +150,12 @@ export class TrafficWidget {
     const data = this.data;
     for (const name of ["rx", "tx"]) {
       const direction = data.freshness[name];
-      const state = directionState(direction, now);
-      this.element.querySelector(`[data-rate="${name}"]`).textContent = formatRate(direction.currentBps);
+      const state = currentReading(data.series[name], direction, now);
+      this.element.querySelector(`[data-rate="${name}"]`).textContent = formatRate(state.bps);
+      this.element.querySelector(`[data-rate-label="${name}"]`).textContent = state.label;
       const age = this.element.querySelector(`[data-age="${name}"]`);
-      age.textContent = `sample ${state.age}${state.stale ? " · stale" : ""}`;
-      age.classList.toggle("is-stale", state.stale);
+      age.textContent = `sample ${state.age}${state.unknown ? " · latest unknown" : ""}${state.stale ? " · stale" : ""}`;
+      age.classList.toggle("is-stale", state.stale || state.unknown);
       const peak = summarizePeaks(data.series[`${name}Peak`], now, data.pollIntervalMs);
       this.element.querySelector(`[data-peak="${name}"]`).textContent = formatRate(peak.latestBps);
       this.element.querySelector(`[data-high="${name}"]`).textContent = formatRate(peak.highBps);

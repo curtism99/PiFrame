@@ -244,12 +244,11 @@ html.hide-cursor * {
 .traffic-direction { min-width: 0; }
 .traffic-rate, .traffic-detail { display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 12px; }
 .traffic-rate > span, .traffic-detail > * { white-space: nowrap; }
-.traffic-direction-label { display: inline-flex; align-items: center; gap: 7px; }
+.traffic-direction-label { display: inline-flex; align-items: center; }
 .traffic-detail { margin-top: 3px; font-size: 0.8em; }
 .traffic-detail small { font-size: 1em; color: #c1cbd3; }
 .traffic-rx { color: #56def5; }
 .traffic-tx { color: #ffc66d; }
-.traffic-rate i { width: 16px; border-top: 2px solid currentColor; align-self: center; }
 .traffic-health { color: #b9c9d2; font-size: 0.8em; white-space: nowrap; }
 .traffic-widget [hidden] { display: none; }
 .traffic-plot { min-height: 0; min-width: 0; overflow: hidden; text-shadow: none; }

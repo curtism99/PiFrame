@@ -12,7 +12,7 @@ import {
 import { createTrafficService, validatePrivateConfig, readPrivateConfig } from "../server/widgets/trafficService.js";
 import { configRouter } from "../server/routes/config.js";
 import { widgetsRouter } from "../server/routes/widgets.js";
-import { alignTraffic, plotTable, formatRate, directionState, formatLocalTime, summarizePeaks } from "../app/js/trafficModel.js";
+import { alignTraffic, plotTable, formatRate, directionState, formatLocalTime, summarizePeaks, currentReading } from "../app/js/trafficModel.js";
 import { publicTrafficConfig } from "../server/widgets/trafficConfig.js";
 
 const T = 1_700_000_000_000;
@@ -32,6 +32,34 @@ const statistics = (value = 250e6, timestamp = T) => ({
   ]
 });
 const response = (data, status = 200, headers = {}) => new Response(JSON.stringify(data), { status, headers });
+
+test("current readings use the newest source average per direction, including zero and source age", () => {
+  const rx = [{ timestampMs: T - 20_000, bps: 200e6 }, { timestampMs: T - 15_000, bps: 0 }];
+  const tx = [{ timestampMs: T - 35_000, bps: 12e6 }];
+  assert.deepEqual(currentReading(rx, directionFreshness(rx, T), T), {
+    bps: 0, timestampMs: T - 15_000, label: "current", unknown: false, age: "15s", stale: false
+  });
+  assert.equal(currentReading(tx, directionFreshness(tx, T), T).age, "35s");
+  assert.equal(currentReading(tx, directionFreshness(tx, T), T).bps, 12e6);
+});
+
+test("unknown or stale newest averages show last known values without relabelling them current", () => {
+  const points = [{ timestampMs: T - 20_000, bps: 250e6 }, { timestampMs: T - 10_000, bps: null }];
+  const last = currentReading(points, directionFreshness(points, T), T);
+  assert.equal(last.label, "last");
+  assert.equal(last.bps, 250e6);
+  assert.equal(last.age, "20s");
+  assert.equal(last.unknown, true);
+  assert.equal(last.stale, false);
+  const older = currentReading(points.slice(0, 1), directionFreshness(points, T), T + 100_000);
+  assert.equal(older.label, "last");
+  assert.equal(older.age, "2m 0s");
+  assert.equal(older.stale, true);
+  assert.equal(currentReading([{ timestampMs: T, bps: null }], {}, T).bps, null);
+  assert.equal(currentReading([{ timestampMs: T + 1, bps: 9e9 }], {}, T).bps, null);
+  const revised = normalizePoints([{ x: T - 1000, y: 500e6 }, { x: T - 1000, y: 100e6 }]);
+  assert.equal(currentReading(revised, {}, T).bps, 100e6);
+});
 
 test("peak readings keep latest reported max separate from rolling-hour high and source age", () => {
   const points = [

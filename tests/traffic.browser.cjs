@@ -70,6 +70,9 @@ const { chromium } = require(process.env.PIFRAME_PLAYWRIGHT_MODULE || "playwrigh
       return ["rx", "tx"].map((name) => {
         const points = window.testTraffic.data.series[`${name}Peak`];
         return {
+          current: document.querySelector(`[data-rate="${name}"]`).textContent,
+          label: document.querySelector(`[data-rate-label="${name}"]`).textContent,
+          expectedCurrent: formatRate(window.testTraffic.data.series[name].at(-1).bps),
           peak: document.querySelector(`[data-peak="${name}"]`).textContent,
           high: document.querySelector(`[data-high="${name}"]`).textContent,
           expectedPeak: formatRate(points.at(-1).bps),
@@ -80,10 +83,13 @@ const { chromium } = require(process.env.PIFRAME_PLAYWRIGHT_MODULE || "playwrigh
       });
     });
     for (const reading of readouts) {
+      assert.equal(reading.current, reading.expectedCurrent);
+      assert.equal(reading.label, "current");
       assert.equal(reading.peak, reading.expectedPeak);
       assert.equal(reading.high, reading.expectedHigh);
       assert.notEqual(reading.ownTimestamp, reading.averageTimestamp);
     }
+    assert.equal(await page.locator(".traffic-direction-label i").count(), 0, "no dash markers precede RX/TX");
     assert.equal(await page.locator("[data-capacity]").innerText(), "Circuit: 2.00 Gbps");
     await fs.mkdir(path.join(root, ".runtime"), { recursive: true });
     for (const [width, height] of [[1920, 1080], [1280, 720], [800, 600], [480, 800]]) {
@@ -176,10 +182,26 @@ const { chromium } = require(process.env.PIFRAME_PLAYWRIGHT_MODULE || "playwrigh
       const widget = window.testTraffic;
       clearTimeout(widget.pollTimer);
       widget.data.freshness.rx.latestTimestampMs = Date.now() - 180000;
+      widget.data.series.rx = widget.data.series.rx.map((p) => ({ ...p, timestampMs: p.timestampMs - 180000 }));
       widget.draw();
       return widget.element.querySelector('[data-age="rx"]').textContent;
     });
     assert.match(staleText, /stale/);
+    assert.equal(await page.locator('[data-rate-label="rx"]').innerText(), "last");
+    const unknownCurrent = await page.evaluate(() => {
+      const widget = window.testTraffic;
+      const now = Date.now();
+      widget.data.series.tx = [{ timestampMs: now - 20000, bps: 0 }, { timestampMs: now - 1000, bps: null }];
+      widget.draw();
+      return {
+        label: widget.element.querySelector('[data-rate-label="tx"]').textContent,
+        value: widget.element.querySelector('[data-rate="tx"]').textContent,
+        age: widget.element.querySelector('[data-age="tx"]').textContent
+      };
+    });
+    assert.equal(unknownCurrent.label, "last");
+    assert.equal(unknownCurrent.value, "0.00 Mbps");
+    assert.match(unknownCurrent.age, /sample 20s.*latest unknown/);
     const peakState = await page.evaluate(() => {
       const widget = window.testTraffic;
       const now = Date.now();

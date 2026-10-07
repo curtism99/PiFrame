@@ -53,6 +53,21 @@ export function directionState(direction, nowMs) {
   };
 }
 
+export function currentReading(points = [], direction, nowMs) {
+  const observed = points.filter((point) => Number.isFinite(point.timestampMs) && point.timestampMs <= nowMs);
+  const valid = (point) => Number.isFinite(point.bps) && point.bps >= 0;
+  const latest = observed.findLast(valid);
+  const unknown = !observed.length || !valid(observed.at(-1));
+  const state = directionState({ ...direction, latestTimestampMs: latest?.timestampMs ?? null }, nowMs);
+  return {
+    bps: latest?.bps ?? null,
+    timestampMs: latest?.timestampMs ?? null,
+    label: latest && (state.stale || unknown) ? "last" : "current",
+    unknown,
+    ...state
+  };
+}
+
 export function summarizePeaks(points = [], nowMs, pollIntervalMs = 15_000) {
   // Each peak series has its own timestamps, independent of average samples.
   const visible = points.filter((point) => Number.isFinite(point.timestampMs) &&
