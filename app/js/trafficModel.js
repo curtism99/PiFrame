@@ -62,7 +62,7 @@ export function currentReading(points = [], direction, nowMs) {
   return {
     bps: latest?.bps ?? null,
     timestampMs: latest?.timestampMs ?? null,
-    label: latest && (state.stale || unknown) ? "last" : "current",
+    label: "latest",
     unknown,
     ...state
   };
@@ -78,10 +78,11 @@ export function summarizePeaks(points = [], nowMs, pollIntervalMs = 15_000) {
   const latestValid = numeric.at(-1);
   const staleAfterMs = Math.max(60_000, 3 * (spacing(numeric) ?? 0), 3 * pollIntervalMs);
   return {
-    latestBps: latest && valid(latest) ? latest.bps : null,
-    latestTimestampMs: latest?.timestampMs ?? null,
+    // Readouts retain the last recorded peak; plotted nulls remain unknown gaps.
+    latestBps: latestValid?.bps ?? null,
+    latestTimestampMs: latestValid?.timestampMs ?? null,
     highBps: numeric.length ? Math.max(...numeric.map((point) => point.bps)) : null,
-    age: formatAge(latest?.timestampMs, nowMs),
+    age: formatAge(latestValid?.timestampMs, nowMs),
     stale: !latestValid || nowMs - latestValid.timestampMs > staleAfterMs,
     unknown: !latest || !valid(latest)
   };

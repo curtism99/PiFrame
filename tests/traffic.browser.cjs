@@ -84,7 +84,7 @@ const { chromium } = require(process.env.PIFRAME_PLAYWRIGHT_MODULE || "playwrigh
     });
     for (const reading of readouts) {
       assert.equal(reading.current, reading.expectedCurrent);
-      assert.equal(reading.label, "current");
+      assert.equal(reading.label, "latest");
       assert.equal(reading.peak, reading.expectedPeak);
       assert.equal(reading.high, reading.expectedHigh);
       assert.notEqual(reading.ownTimestamp, reading.averageTimestamp);
@@ -145,6 +145,73 @@ const { chromium } = require(process.env.PIFRAME_PLAYWRIGHT_MODULE || "playwrigh
     }
     await page.setViewportSize({ width: 1920, height: 1080 });
     await page.waitForFunction(() => !window.testTraffic.controller);
+    // Reproduce the live Pi's valid -> newer nulls -> revised valid responses.
+    const cycleResponse = await page.evaluate(() => {
+      clearTimeout(window.testTraffic.pollTimer);
+      return structuredClone(window.testTraffic.data);
+    });
+    const cycleTime = Date.now();
+    const values = { rx: 95e6, tx: 0, rxPeak: 129e6, txPeak: 12e6 };
+    for (const name of Object.keys(values)) {
+      cycleResponse.series[name] = [{ timestampMs: cycleTime - 41000, bps: values[name] }];
+    }
+    for (const name of ["rx", "tx"]) cycleResponse.freshness[name] = {
+      latestTimestampMs: cycleTime - 41000, currentBps: values[name], staleAfterMs: 192000
+    };
+    await page.route("**/api/widgets/krc-acc-traffic", (route) => route.fulfill({ json: cycleResponse }));
+    let knownGeometry;
+    for (const phase of ["valid", "partial", "revised"]) {
+      if (phase === "partial") for (const name of Object.keys(values)) {
+        cycleResponse.series[name].push({ timestampMs: cycleTime - 1000, bps: null });
+      }
+      if (phase === "revised") for (const name of Object.keys(values)) {
+        cycleResponse.series[name].at(-1).bps = values[name] / 2;
+      }
+      await page.evaluate(() => window.testTraffic.refresh());
+      for (const name of ["rx", "tx"]) {
+        assert.equal(await page.locator(`[data-rate-label="${name}"]`).innerText(), "latest");
+        assert.notEqual(await page.locator(`[data-rate="${name}"]`).innerText(), "—");
+        assert.notEqual(await page.locator(`[data-peak="${name}"]`).innerText(), "—");
+      }
+      assert.equal(await page.locator('[data-peak="rx"]').innerText(), phase === "revised" ? "64.50 Mbps" : "129.00 Mbps");
+      assert.equal(await page.locator('[data-rate="tx"]').innerText(), "0.00 Mbps");
+      const ageIndicators = await page.evaluate(() => [...document.querySelectorAll(".traffic-unknown-icon")].map((icon) => ({
+        active: icon.dataset.active, visibility: getComputedStyle(icon).visibility,
+        hidden: icon.getAttribute("aria-hidden"), label: icon.getAttribute("aria-label"), title: icon.title,
+        width: icon.getBoundingClientRect().width
+      })));
+      for (const indicator of ageIndicators) {
+        const unknown = phase === "partial";
+        assert.equal(indicator.active, String(unknown));
+        assert.equal(indicator.visibility, unknown ? "visible" : "hidden");
+        assert.equal(indicator.hidden, String(!unknown));
+        assert.match(indicator.label, /Newer sample is unknown/);
+        assert.equal(indicator.title, indicator.label);
+        assert.ok(indicator.width > 0 && indicator.width <= 16, "compact slot stays reserved");
+      }
+      const statusGeometry = await page.evaluate(() => [...document.querySelectorAll(".traffic-detail small, [data-high]")].map((el) => {
+        const rect = el.getBoundingClientRect();
+        return { x: rect.x, y: rect.y, width: rect.width };
+      }));
+      if (phase === "valid") knownGeometry = statusGeometry;
+      if (phase === "partial") assert.deepEqual(statusGeometry, knownGeometry, "icon toggles do not move age or high readouts");
+      if (phase === "partial") {
+        assert.match(await page.locator('[data-peak-age="rx"]').innerText(), /^peak 4\ds$/);
+        assert.equal(await page.evaluate(() => window.testTraffic.data.series.rxPeak.at(-1).bps), null);
+        for (const [width, height] of [[800, 600], [480, 800]]) {
+          await page.setViewportSize({ width, height });
+          await page.waitForTimeout(100);
+          assert.ok(await page.evaluate(() => {
+            const widget = document.querySelector(".traffic-widget");
+            const heading = widget.querySelector(".traffic-heading").getBoundingClientRect();
+            const plot = widget.querySelector(".traffic-plot").getBoundingClientRect();
+            const footer = widget.querySelector(".traffic-footer").getBoundingClientRect();
+            return heading.bottom <= plot.top && plot.bottom <= footer.top && footer.bottom <= innerHeight;
+          }), "newer-unknown indicators fit compact layouts");
+        }
+        await page.setViewportSize({ width: 1920, height: 1080 });
+      }
+    }
     await page.evaluate(() => {
       clearTimeout(window.testTraffic.pollTimer);
       window.testSlideChanges = 0;
@@ -181,13 +248,14 @@ const { chromium } = require(process.env.PIFRAME_PLAYWRIGHT_MODULE || "playwrigh
     const staleText = await page.evaluate(() => {
       const widget = window.testTraffic;
       clearTimeout(widget.pollTimer);
-      widget.data.freshness.rx.latestTimestampMs = Date.now() - 180000;
-      widget.data.series.rx = widget.data.series.rx.map((p) => ({ ...p, timestampMs: p.timestampMs - 180000 }));
+      const outageMs = widget.data.freshness.rx.staleAfterMs + 60000;
+      widget.data.freshness.rx.latestTimestampMs = Date.now() - outageMs;
+      widget.data.series.rx = widget.data.series.rx.map((p) => ({ ...p, timestampMs: p.timestampMs - outageMs }));
       widget.draw();
       return widget.element.querySelector('[data-age="rx"]').textContent;
     });
     assert.match(staleText, /stale/);
-    assert.equal(await page.locator('[data-rate-label="rx"]').innerText(), "last");
+    assert.equal(await page.locator('[data-rate-label="rx"]').innerText(), "latest");
     const unknownCurrent = await page.evaluate(() => {
       const widget = window.testTraffic;
       const now = Date.now();
@@ -199,9 +267,10 @@ const { chromium } = require(process.env.PIFRAME_PLAYWRIGHT_MODULE || "playwrigh
         age: widget.element.querySelector('[data-age="tx"]').textContent
       };
     });
-    assert.equal(unknownCurrent.label, "last");
+    assert.equal(unknownCurrent.label, "latest");
     assert.equal(unknownCurrent.value, "0.00 Mbps");
-    assert.match(unknownCurrent.age, /sample 20s.*latest unknown/);
+    assert.equal(unknownCurrent.age.trim(), "sample 20s");
+    assert.equal(await page.locator('[data-age="tx"] .traffic-unknown-icon').getAttribute("aria-hidden"), "false");
     const peakState = await page.evaluate(() => {
       const widget = window.testTraffic;
       const now = Date.now();
@@ -213,9 +282,11 @@ const { chromium } = require(process.env.PIFRAME_PLAYWRIGHT_MODULE || "playwrigh
         age: widget.element.querySelector('[data-peak-age="rx"]').textContent
       };
     });
-    assert.equal(peakState.latest, "—");
+    assert.equal(peakState.latest, "1.70 Gbps");
     assert.equal(peakState.high, "1.70 Gbps");
-    assert.match(peakState.age, /unknown.*stale/);
+    assert.match(peakState.age, /peak 3m 0s.*stale/);
+    assert.doesNotMatch(peakState.age, /newer unknown/);
+    assert.equal(await page.locator('[data-peak-age="rx"] .traffic-unknown-icon').getAttribute("aria-hidden"), "false");
     await page.evaluate(() => {
       window.testTraffic.data.error = { code: "network", message: "UISP is unreachable; retrying" };
       window.testTraffic.draw();

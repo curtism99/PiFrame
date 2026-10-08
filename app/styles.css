@@ -246,7 +246,11 @@ html.hide-cursor * {
 .traffic-rate > span, .traffic-detail > * { white-space: nowrap; }
 .traffic-direction-label { display: inline-flex; align-items: center; }
 .traffic-detail { margin-top: 3px; font-size: 0.8em; }
-.traffic-detail small { font-size: 1em; color: #c1cbd3; }
+.traffic-detail small { display: inline-flex; align-items: center; gap: 0.35em; font-size: 1em; color: #c1cbd3; }
+.traffic-unknown-icon { display: inline-flex; width: 1em; height: 1em; flex: 0 0 1em; color: #ffd38b; }
+.traffic-unknown-icon[data-active="false"] { visibility: hidden; }
+.traffic-unknown-icon svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.traffic-unknown-icon .traffic-unknown-dot { fill: currentColor; stroke: none; }
 .traffic-rx { color: #56def5; }
 .traffic-tx { color: #ffc66d; }
 .traffic-health { color: #b9c9d2; font-size: 0.8em; white-space: nowrap; }

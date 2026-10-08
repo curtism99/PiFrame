@@ -33,26 +33,26 @@ const statistics = (value = 250e6, timestamp = T) => ({
 });
 const response = (data, status = 200, headers = {}) => new Response(JSON.stringify(data), { status, headers });
 
-test("current readings use the newest source average per direction, including zero and source age", () => {
+test("latest readings use the newest source average per direction, including zero and source age", () => {
   const rx = [{ timestampMs: T - 20_000, bps: 200e6 }, { timestampMs: T - 15_000, bps: 0 }];
   const tx = [{ timestampMs: T - 35_000, bps: 12e6 }];
   assert.deepEqual(currentReading(rx, directionFreshness(rx, T), T), {
-    bps: 0, timestampMs: T - 15_000, label: "current", unknown: false, age: "15s", stale: false
+    bps: 0, timestampMs: T - 15_000, label: "latest", unknown: false, age: "15s", stale: false
   });
   assert.equal(currentReading(tx, directionFreshness(tx, T), T).age, "35s");
   assert.equal(currentReading(tx, directionFreshness(tx, T), T).bps, 12e6);
 });
 
-test("unknown or stale newest averages show last known values without relabelling them current", () => {
+test("latest label stays stable for unknown or stale averages while age reflects the last valid value", () => {
   const points = [{ timestampMs: T - 20_000, bps: 250e6 }, { timestampMs: T - 10_000, bps: null }];
   const last = currentReading(points, directionFreshness(points, T), T);
-  assert.equal(last.label, "last");
+  assert.equal(last.label, "latest");
   assert.equal(last.bps, 250e6);
   assert.equal(last.age, "20s");
   assert.equal(last.unknown, true);
   assert.equal(last.stale, false);
   const older = currentReading(points.slice(0, 1), directionFreshness(points, T), T + 100_000);
-  assert.equal(older.label, "last");
+  assert.equal(older.label, "latest");
   assert.equal(older.age, "2m 0s");
   assert.equal(older.stale, true);
   assert.equal(currentReading([{ timestampMs: T, bps: null }], {}, T).bps, null);
@@ -82,11 +82,13 @@ test("peak readings keep latest reported max separate from rolling-hour high and
   assert.equal(summarizePeaks(points, T + 1).highBps, 10e9);
 });
 
-test("unknown latest peaks do not carry forward old maxima; stale and revised data remain explicit", () => {
+test("unknown latest peaks retain the latest valid peak with its real age; revisions remain authoritative", () => {
   const points = [{ timestampMs: T - 180_000, bps: 700e6 }, { timestampMs: T - 2000, bps: null }];
   for (const invalid of [null, undefined, -1, NaN, Infinity]) {
     const peak = summarizePeaks([points[0], { ...points[1], bps: invalid }], T);
-    assert.equal(peak.latestBps, null);
+    assert.equal(peak.latestBps, 700e6);
+    assert.equal(peak.latestTimestampMs, T - 180_000);
+    assert.equal(peak.age, "3m 0s");
     assert.equal(peak.highBps, 700e6);
     assert.equal(peak.unknown, true);
     assert.equal(peak.stale, true);
@@ -97,7 +99,34 @@ test("unknown latest peaks do not carry forward old maxima; stale and revised da
   assert.equal(revised.latestBps, 300e6);
   assert.equal(revised.highBps, 300e6);
   assert.equal(summarizePeaks(points, T + 3_600_000).highBps, null);
+  assert.equal(summarizePeaks(points, T + 3_600_000).latestBps, null);
   assert.equal(summarizePeaks([], T).age, "waiting");
+  assert.equal(summarizePeaks([{ timestampMs: T, bps: null }], T).latestBps, null);
+  assert.equal(summarizePeaks([{ timestampMs: T + 1, bps: 20e9 }], T).latestBps, null);
+});
+
+test("published, trailing-null and revised fetches keep latest rates and peaks stable without filling chart gaps", () => {
+  const known = [{ x: T - 131_000, y: 129e6 }, { x: T - 75_000, y: 101e6 }, { x: T - 11_000, y: 95e6 }];
+  const partial = [...known, { x: T - 10_000, y: null }, { x: T + 21_000, y: null }];
+  const snapshots = [known, partial, [...partial, { x: T + 21_000, y: 80e6 }]];
+  const expected = [95e6, 95e6, 80e6];
+  for (const [index, raw] of snapshots.entries()) {
+    const now = T + index * 15_000;
+    const points = normalizePoints(raw);
+    const reading = currentReading(points, directionFreshness(points, now), now);
+    const peak = summarizePeaks(points, now);
+    assert.equal(reading.label, "latest");
+    assert.equal(reading.bps, expected[index]);
+    assert.equal(peak.latestBps, expected[index]);
+    assert.equal(peak.age, index === 0 ? "11s" : index === 1 ? "26s" : "9s");
+    assert.equal(peak.highBps, 129e6);
+    if (index === 1) {
+      assert.equal(reading.unknown, true);
+      assert.equal(peak.unknown, true);
+      assert.equal(points.at(-2).bps, null);
+      assert.ok(plotTable(points)[1].includes(null), "readout retention never fills source nulls");
+    }
+  }
 });
 
 test("peak freshness uses its own spacing and poll interval rather than the average direction", () => {

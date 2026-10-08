@@ -2,6 +2,26 @@ import uPlot from "../vendor/uplot-1.6.32/uPlot.esm.js";
 import { fetchTrafficWidget } from "./widgetClient.js";
 import { alignTraffic, formatRate, formatAge, directionState, formatLocalTime, summarizePeaks, currentReading } from "./trafficModel.js";
 
+// Keep a fixed icon slot even when the newest observation is known.
+const unknownIcon = `<span class="traffic-unknown-icon" data-active="false" role="img" aria-hidden="true"
+  aria-label="Newer sample is unknown; showing the last recorded value"
+  title="Newer sample is unknown; showing the last recorded value">
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/>
+    <path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4"/><circle class="traffic-unknown-dot" cx="12" cy="16.5" r=".8"/>
+  </svg></span>`;
+
+function updateSampleAge(element, prefix, state) {
+  element.querySelector("[data-age-text]").textContent = `${prefix} ${state.age}${state.stale ? " · stale" : ""}`;
+  const icon = element.querySelector(".traffic-unknown-icon");
+  icon.dataset.active = String(state.unknown);
+  icon.setAttribute("aria-hidden", String(!state.unknown));
+  const explanation = Number.isFinite(state.bps ?? state.latestBps)
+    ? "Newer sample is unknown; showing the last recorded value" : "No recorded sample is available";
+  icon.title = explanation;
+  icon.setAttribute("aria-label", explanation);
+  element.classList.toggle("is-stale", state.stale || state.unknown);
+}
+
 export class TrafficWidget {
   constructor(element, config = {}) {
     this.element = element;
@@ -39,11 +59,11 @@ export class TrafficWidget {
         ${["rx", "tx"].map((name) => `
           <div class="traffic-direction traffic-${name}">
             <div class="traffic-rate"><span class="traffic-direction-label">${name === "rx" ? "RX / from provider" : "TX / to provider"}</span>
-              <span title="Latest recorded UISP average; last known value when stale or unknown"><span data-rate-label="${name}">current</span> <b data-rate="${name}">—</b></span>
-              <span data-peak-group>peak <b data-peak="${name}">—</b></span>
+              <span title="Latest valid recorded UISP average; source sample age shown below"><span data-rate-label="${name}">latest</span> <b data-rate="${name}">—</b></span>
+              <span data-peak-group title="Latest valid recorded UISP maximum; peak sample age shown below">peak <b data-peak="${name}">—</b></span>
             </div>
-            <div class="traffic-detail"><small data-age="${name}">waiting</small>
-              <small data-peak-group data-peak-age="${name}">peak waiting</small>
+            <div class="traffic-detail"><small data-age="${name}"><span data-age-text>waiting</span>${unknownIcon}</small>
+              <small data-peak-group data-peak-age="${name}"><span data-age-text>peak waiting</span>${unknownIcon}</small>
               <span data-peak-group>1h high <b data-high="${name}">—</b></span>
             </div>
           </div>`).join("")}
@@ -154,14 +174,12 @@ export class TrafficWidget {
       this.element.querySelector(`[data-rate="${name}"]`).textContent = formatRate(state.bps);
       this.element.querySelector(`[data-rate-label="${name}"]`).textContent = state.label;
       const age = this.element.querySelector(`[data-age="${name}"]`);
-      age.textContent = `sample ${state.age}${state.unknown ? " · latest unknown" : ""}${state.stale ? " · stale" : ""}`;
-      age.classList.toggle("is-stale", state.stale || state.unknown);
+      updateSampleAge(age, "sample", state);
       const peak = summarizePeaks(data.series[`${name}Peak`], now, data.pollIntervalMs);
       this.element.querySelector(`[data-peak="${name}"]`).textContent = formatRate(peak.latestBps);
       this.element.querySelector(`[data-high="${name}"]`).textContent = formatRate(peak.highBps);
       const peakAge = this.element.querySelector(`[data-peak-age="${name}"]`);
-      peakAge.textContent = `peak ${peak.age}${peak.unknown ? " · unknown" : ""}${peak.stale ? " · stale" : ""}`;
-      peakAge.classList.toggle("is-stale", peak.stale || peak.unknown);
+      updateSampleAge(peakAge, "peak", peak);
     }
     const stale = ["rx", "tx"].some((name) => directionState(data.freshness[name], now).stale);
     const apiStale = data.fetchedAtMs === null || now - data.fetchedAtMs > 60_000;
